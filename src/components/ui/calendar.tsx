@@ -13,34 +13,37 @@ function Calendar({ className, classNames, showOutsideDays = true, ...props }: C
       showOutsideDays={showOutsideDays}
       className={cn('p-3', className)}
       classNames={{
-        months: 'flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0',
+        months: 'msp-flex msp-flex-col sm:msp-flex-row msp-space-y-4 sm:msp-space-x-4 sm:msp-space-y-0',
         month: 'space-y-4',
-        caption: 'flex justify-center pt-1 relative items-center',
-        caption_label: 'text-sm font-medium',
-        nav: 'space-x-1 flex items-center',
-        nav_button: cn(buttonVariants({ variant: 'outline' }), 'h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100'),
-        nav_button_previous: 'absolute left-1',
-        nav_button_next: 'absolute right-1',
-        table: 'w-full border-collapse space-y-1',
+        caption: 'msp-flex msp-justify-center msp-pt-1 msp-relative msp-items-center',
+        caption_label: 'msp-text-sm msp-font-medium',
+        nav: 'msp-space-x-1 msp-flex msp-items-center',
+        nav_button: cn(buttonVariants({ variant: 'outline' }), 'msp-h-7 msp-w-7 msp-bg-transparent msp-p-0 msp-opacity-50 hover:msp-opacity-100'),
+        nav_button_previous: 'msp-absolute msp-left-1',
+        nav_button_next: 'msp-absolute msp-right-1',
+        table: 'msp-w-full msp-border-collapse msp-space-y-1',
         head_row: 'flex',
-        head_cell: 'text-muted-foreground rounded-md w-9 font-normal text-[0.8rem]',
-        row: 'flex w-full mt-2',
-        cell: 'h-9 w-9 text-center text-sm p-0 relative [&:has([aria-selected].day-range-end)]:rounded-r-md [&:has([aria-selected].day-outside)]:bg-accent/50 [&:has([aria-selected])]:bg-accent first:[&:has([aria-selected])]:rounded-l-md last:[&:has([aria-selected])]:rounded-r-md focus-within:relative focus-within:z-20',
-        day: cn(buttonVariants({ variant: 'ghost' }), 'h-9 w-9 p-0 font-normal aria-selected:opacity-100'),
+        head_cell: 'msp-text-muted-foreground msp-rounded-md msp-w-9 msp-font-normal msp-text-[0.8rem]',
+        row: 'msp-flex msp-w-full msp-mt-2',
+        cell: 'msp-h-9 msp-w-9 msp-text-center msp-text-sm msp-p-0 msp-relative [&:has([aria-selected].day-range-end)]:msp-rounded-r-md [&:has([aria-selected].day-outside)]:msp-bg-accent/50 [&:has([aria-selected])]:msp-bg-accent first:[&:has([aria-selected])]:msp-rounded-l-md last:[&:has([aria-selected])]:msp-rounded-r-md focus-within:msp-relative focus-within:msp-z-20',
+        day: cn(buttonVariants({ variant: 'ghost' }), 'msp-h-9 msp-w-9 msp-p-0 msp-font-normal aria-selected:msp-opacity-100'),
         day_range_end: 'day-range-end',
         day_selected:
-          'bg-primary text-primary-foreground hover:bg-primary hover:text-primary-foreground focus:bg-primary focus:text-primary-foreground',
-        day_today: 'bg-accent text-accent-foreground',
+          'msp-bg-primary msp-text-primary-foreground hover:msp-bg-primary hover:msp-text-primary-foreground focus:msp-bg-primary focus:msp-text-primary-foreground',
+        day_today: 'msp-bg-accent msp-text-accent-foreground',
         day_outside:
-          'day-outside text-muted-foreground opacity-50 aria-selected:bg-accent/50 aria-selected:text-muted-foreground aria-selected:opacity-30',
-        day_disabled: 'text-muted-foreground opacity-50',
-        day_range_middle: 'aria-selected:bg-accent aria-selected:text-accent-foreground',
+          'msp-day-outside msp-text-muted-foreground msp-opacity-50 aria-selected:msp-bg-accent/50 aria-selected:msp-text-muted-foreground aria-selected:msp-opacity-30',
+        day_disabled: 'msp-text-muted-foreground msp-opacity-50',
+        day_range_middle: 'aria-selected:msp-bg-accent aria-selected:msp-text-accent-foreground',
         day_hidden: 'invisible',
         ...classNames,
       }}
       components={{
-        IconLeft: ({ ..._props }) => <ChevronLeft className="h-4 w-4" />,
-        IconRight: ({ ..._props }) => <ChevronRight className="h-4 w-4" />,
+        Chevron: ({ orientation }) => (
+          orientation === 'left'
+            ? <ChevronLeft className="msp-h-4 msp-w-4" />
+            : <ChevronRight className="msp-h-4 msp-w-4" />
+        ),
       }}
       {...props}
     />

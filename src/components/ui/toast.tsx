@@ -14,7 +14,7 @@ const ToastViewport = React.forwardRef<
   <ToastPrimitives.Viewport
     ref={ref}
     className={cn(
-      'fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]',
+      'msp-fixed msp-top-0 msp-z-[100] msp-flex msp-max-h-screen msp-w-full msp-flex-col-reverse msp-p-4 sm:msp-bottom-0 sm:msp-right-0 sm:msp-top-auto sm:msp-flex-col md:msp-max-w-[420px]',
       className
     )}
     {...props}
@@ -23,12 +23,12 @@ const ToastViewport = React.forwardRef<
 ToastViewport.displayName = ToastPrimitives.Viewport.displayName;
 
 const toastVariants = cva(
-  'group pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-md border p-6 pr-8 shadow-lg transition-all data-[swipe=cancel]:translate-x-0 data-[swipe=end]:translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:transition-none data-[state=open]:animate-in data-[state=closed]:animate-out data-[swipe=end]:animate-out data-[state=closed]:fade-out-80 data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-top-full data-[state=open]:sm:slide-in-from-bottom-full',
+  'msp-group msp-pointer-events-auto msp-relative msp-flex msp-w-full msp-items-center msp-justify-between msp-space-x-4 msp-overflow-hidden msp-rounded-md msp-border msp-p-6 msp-pr-8 msp-shadow-lg msp-transition-all data-[swipe=cancel]:msp-translate-x-0 data-[swipe=end]:msp-translate-x-[var(--radix-toast-swipe-end-x)] data-[swipe=move]:msp-translate-x-[var(--radix-toast-swipe-move-x)] data-[swipe=move]:msp-transition-none data-[state=open]:msp-animate-in data-[state=closed]:msp-animate-out data-[swipe=end]:msp-animate-out data-[state=closed]:msp-fade-out-80 data-[state=closed]:msp-slide-out-to-right-full data-[state=open]:msp-slide-in-from-top-full data-[state=open]:sm:msp-slide-in-from-bottom-full',
   {
     variants: {
       variant: {
-        default: 'border bg-background text-foreground',
-        destructive: 'destructive group border-destructive bg-destructive text-destructive-foreground',
+        default: 'msp-border msp-bg-background msp-text-foreground',
+        destructive: 'msp-destructive msp-group msp-border-destructive msp-bg-destructive msp-text-destructive-foreground',
       },
     },
     defaultVariants: {
@@ -52,7 +52,7 @@ const ToastAction = React.forwardRef<
   <ToastPrimitives.Action
     ref={ref}
     className={cn(
-      'inline-flex h-8 shrink-0 items-center justify-center rounded-md border bg-transparent px-3 text-sm font-medium ring-offset-background transition-colors hover:bg-secondary focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 group-[.destructive]:border-muted/40 group-[.destructive]:hover:border-destructive/30 group-[.destructive]:hover:bg-destructive group-[.destructive]:hover:text-destructive-foreground group-[.destructive]:focus:ring-destructive',
+      'msp-inline-flex msp-h-8 msp-shrink-0 msp-items-center msp-justify-center msp-rounded-md msp-border msp-bg-transparent msp-px-3 msp-text-sm msp-font-medium msp-ring-offset-background msp-transition-colors hover:msp-bg-secondary focus:msp-outline-none focus:msp-ring-2 focus:msp-ring-ring focus:msp-ring-offset-2 disabled:msp-pointer-events-none disabled:msp-opacity-50 group-[.destructive]:msp-border-muted/40 group-[.destructive]:hover:msp-border-destructive/30 group-[.destructive]:hover:msp-bg-destructive group-[.destructive]:hover:msp-text-destructive-foreground group-[.destructive]:focus:msp-ring-destructive',
       className
     )}
     {...props}
@@ -67,13 +67,13 @@ const ToastClose = React.forwardRef<
   <ToastPrimitives.Close
     ref={ref}
     className={cn(
-      'absolute right-2 top-2 rounded-md p-1 text-foreground/50 opacity-0 transition-opacity hover:text-foreground focus:opacity-100 focus:outline-none focus:ring-2 group-hover:opacity-100 group-[.destructive]:text-red-300 group-[.destructive]:hover:text-red-50 group-[.destructive]:focus:ring-red-400 group-[.destructive]:focus:ring-offset-red-600',
+      'msp-absolute msp-right-2 msp-top-2 msp-rounded-md msp-p-1 msp-text-foreground/50 msp-opacity-0 msp-transition-opacity hover:msp-text-foreground focus:msp-opacity-100 focus:msp-outline-none focus:msp-ring-2 group-hover:msp-opacity-100 group-[.destructive]:msp-text-red-300 group-[.destructive]:hover:msp-text-red-50 group-[.destructive]:focus:msp-ring-red-400 group-[.destructive]:focus:msp-ring-offset-red-600',
       className
     )}
     toast-close=""
     {...props}
   >
-    <X className="h-4 w-4" />
+    <X className="msp-h-4 msp-w-4" />
   </ToastPrimitives.Close>
 ));
 ToastClose.displayName = ToastPrimitives.Close.displayName;
@@ -81,13 +81,13 @@ ToastClose.displayName = ToastPrimitives.Close.displayName;
 const ToastTitle = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Title>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Title>
->(({ className, ...props }, ref) => <ToastPrimitives.Title ref={ref} className={cn('text-sm font-semibold', className)} {...props} />);
+>(({ className, ...props }, ref) => <ToastPrimitives.Title ref={ref} className={cn('msp-text-sm msp-font-semibold', className)} {...props} />);
 ToastTitle.displayName = ToastPrimitives.Title.displayName;
 
 const ToastDescription = React.forwardRef<
   React.ElementRef<typeof ToastPrimitives.Description>,
   React.ComponentPropsWithoutRef<typeof ToastPrimitives.Description>
->(({ className, ...props }, ref) => <ToastPrimitives.Description ref={ref} className={cn('text-sm opacity-90', className)} {...props} />);
+>(({ className, ...props }, ref) => <ToastPrimitives.Description ref={ref} className={cn('msp-text-sm msp-opacity-90', className)} {...props} />);
 ToastDescription.displayName = ToastPrimitives.Description.displayName;
 
 type ToastProps = React.ComponentPropsWithoutRef<typeof Toast>;

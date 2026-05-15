@@ -92,10 +92,10 @@
 
 @layer base {
   * {
-    @apply border-border;
+    @apply msp-border-border;
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply msp-bg-background msp-text-foreground;
   }
 }

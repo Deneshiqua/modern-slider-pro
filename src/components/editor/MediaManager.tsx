@@ -78,7 +78,7 @@ const MediaManager = ({ isOpen, onClose, onSelect }: MediaManagerProps) => {
         if (!open) onClose();
       }}
     >
-      <DialogContent className="sm:max-w-[860px] h-[80vh] flex flex-col overflow-hidden">
+      <DialogContent className="sm:msp-max-w-[860px] msp-h-[80vh] msp-flex msp-flex-col msp-overflow-hidden">
         <DialogHeader>
           <DialogTitle>{t('mediaManager.title')}</DialogTitle>
         </DialogHeader>
@@ -87,26 +87,26 @@ const MediaManager = ({ isOpen, onClose, onSelect }: MediaManagerProps) => {
         <div
           {...getRootProps()}
           className={cn(
-            'border-2 border-dashed rounded-md p-4 text-center cursor-pointer transition-colors text-sm',
-            isDragActive ? 'border-primary bg-primary/5' : 'border-muted-foreground/30 hover:border-primary/60',
+            'msp-border-2 msp-border-dashed msp-rounded-md msp-p-4 msp-text-center msp-cursor-pointer msp-transition-colors msp-text-sm',
+            isDragActive ? 'msp-border-primary msp-bg-primary/5' : 'msp-border-muted-foreground/30 hover:msp-border-primary/60',
           )}
         >
           <input {...getInputProps()} />
-          <Upload className="mx-auto mb-1 h-5 w-5 text-muted-foreground" />
-          <span className="text-muted-foreground">
+          <Upload className="msp-mx-auto msp-mb-1 msp-h-5 msp-w-5 msp-text-muted-foreground" />
+          <span className="msp-text-muted-foreground">
             {uploading ? 'Uploading…' : isDragActive ? 'Drop files here' : t('mediaManager.upload')}
           </span>
         </div>
 
         {/* File grid */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="msp-flex-1 msp-overflow-y-auto">
           {files.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full text-muted-foreground gap-2">
-              <ImageIcon className="h-10 w-10 opacity-30" />
-              <span className="text-sm">{t('mediaManager.noImages')}</span>
+            <div className="msp-flex msp-flex-col msp-items-center msp-justify-center msp-h-full msp-text-muted-foreground msp-gap-2">
+              <ImageIcon className="msp-h-10 msp-w-10 msp-opacity-30" />
+              <span className="msp-text-sm">{t('mediaManager.noImages')}</span>
             </div>
           ) : (
-            <div className="grid grid-cols-4 gap-3 p-1">
+            <div className="msp-grid msp-grid-cols-4 msp-gap-3 msp-p-1">
               {files.map((file) => {
                 const previewUrl = adapter.getPreviewUrl(file.path);
                 const isSelected = selected?.path === file.path;
@@ -115,30 +115,30 @@ const MediaManager = ({ isOpen, onClose, onSelect }: MediaManagerProps) => {
                     key={file.id}
                     onClick={() => setSelected(isSelected ? null : file)}
                     className={cn(
-                      'group relative rounded-md border-2 overflow-hidden cursor-pointer aspect-square bg-muted transition-colors',
-                      isSelected ? 'border-primary' : 'border-transparent hover:border-muted-foreground/40',
+                      'msp-group msp-relative msp-rounded-md msp-border-2 msp-overflow-hidden msp-cursor-pointer msp-aspect-square msp-bg-muted msp-transition-colors',
+                      isSelected ? 'border-primary' : 'msp-border-transparent hover:msp-border-muted-foreground/40',
                     )}
                   >
                     {previewUrl ? (
                       <img
                         src={previewUrl}
                         alt={file.name}
-                        className="w-full h-full object-cover"
+                        className="msp-w-full msp-h-full msp-object-cover"
                       />
                     ) : (
-                      <div className="flex items-center justify-center h-full">
-                        <ImageIcon className="h-8 w-8 text-muted-foreground/40" />
+                      <div className="msp-flex msp-items-center msp-justify-center msp-h-full">
+                        <ImageIcon className="msp-h-8 msp-w-8 msp-text-muted-foreground/40" />
                       </div>
                     )}
 
                     <button
                       onClick={(e) => handleDelete(e, file)}
-                      className="absolute top-1 right-1 hidden group-hover:flex items-center justify-center w-6 h-6 rounded-full bg-destructive text-destructive-foreground shadow"
+                      className="msp-absolute msp-top-1 msp-right-1 msp-hidden group-hover:msp-flex msp-items-center msp-justify-center msp-w-6 msp-h-6 msp-rounded-full msp-bg-destructive msp-text-destructive-foreground msp-shadow"
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <Trash2 className="msp-h-3 msp-w-3" />
                     </button>
 
-                    <div className="absolute bottom-0 left-0 right-0 bg-black/50 text-white text-xs px-1 py-0.5 truncate opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="msp-absolute msp-bottom-0 msp-left-0 msp-right-0 msp-bg-black/50 msp-text-white msp-text-xs msp-px-1 msp-py-0.5 msp-truncate msp-opacity-0 group-hover:msp-opacity-100 msp-transition-opacity">
                       {file.name}
                     </div>
                   </div>
@@ -149,7 +149,7 @@ const MediaManager = ({ isOpen, onClose, onSelect }: MediaManagerProps) => {
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-2 pt-2 border-t">
+        <div className="msp-flex msp-justify-end msp-gap-2 msp-pt-2 msp-border-t">
           <Button variant="outline" onClick={onClose}>
             {t('mediaManager.cancel')}
           </Button>

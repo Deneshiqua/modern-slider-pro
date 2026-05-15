@@ -7,7 +7,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Grid, LayoutGrid, Monitor, Play, Plus, Save, Settings, SlidersHorizontal, Smartphone, Square, Tablet, Terminal, Upload } from 'lucide-react';
+import { Grid, Group, LayoutGrid, Monitor, Play, Plus, Redo2, Save, Settings, SlidersHorizontal, Smartphone, Square, Tablet, Terminal, Undo2, Ungroup, Upload } from 'lucide-react';
 import React, { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
@@ -28,11 +28,27 @@ import { useEditor } from '@/context/EditorContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { usePublishedSlides } from '@/context/PublishedSlidesContext';
 import { useTheme } from '@/context/ThemeContext';
+import { Slide, SliderEditorSavePayload, SliderProject } from '@/types/editor';
 
-const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
+type ToolbarProps = {
+  onDemoSave?: (slides: Slide[]) => void;
+  onSave?: (payload: SliderEditorSavePayload) => void | Promise<void>;
+  saveButtonLabel?: string;
+};
+
+const isSliderProject = (value: unknown): value is SliderProject => {
+  if (!value || typeof value !== 'object') return false;
+
+  const project = value as Partial<SliderProject>;
+
+  return project.version === 1 && Array.isArray(project.slides);
+};
+
+const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
   const {
     viewMode,
     setViewMode,
+    currentSlideIndex,
     isPlaying,
     togglePlay,
     slides,
@@ -43,6 +59,17 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
     updateSettings,
     canvasSettings,
     updateCanvasSettings,
+    isDirty,
+    markSaved,
+    canUndo,
+    canRedo,
+    undo,
+    redo,
+    setPropertyMode,
+    selectedElementId,
+    selectedElementIds,
+    groupSelectedElements,
+    ungroupElement,
   } = useEditor();
 
   const { theme, toggleTheme } = useTheme();
@@ -57,9 +84,21 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
   const [isCanvasSettingsOpen, setIsCanvasSettingsOpen] = useState(false);
   const GRID_PRESETS = [10, 20, 25, 50, 100];
   const [showCustomGrid, setShowCustomGrid] = useState(false);
+  const selectedRootElement = selectedElementId
+    ? slides[currentSlideIndex]?.elements.find(element => element.id === selectedElementId)
+    : null;
+  const canGroup = selectedElementIds.length > 1;
+  const canUngroup = selectedRootElement?.type === 'box' && Boolean(selectedRootElement.children?.length);
+
+  const createSavePayload = (): SliderEditorSavePayload => ({
+    version: 1,
+    slides,
+    settings,
+    canvasSettings,
+  });
 
   const handleSave = () => {
-    const json = JSON.stringify(slides, null, 2);
+    const json = JSON.stringify(createSavePayload(), null, 2);
     setJsonOutput(json);
     setIsSaveOpen(true);
   };
@@ -71,9 +110,17 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
 
   const handleTest = () => {
     try {
-      const parsedSlides = JSON.parse(jsonInput);
-      if (Array.isArray(parsedSlides)) {
-        loadSlides(parsedSlides);
+      const parsedValue = JSON.parse(jsonInput);
+
+      if (isSliderProject(parsedValue)) {
+        loadSlides(parsedValue.slides);
+        updateSettings(parsedValue.settings ?? {});
+        updateCanvasSettings(parsedValue.canvasSettings ?? {});
+        setIsTestOpen(false);
+        setJsonInput('');
+        toast.success(t('editor.toolbar.slidesLoaded'));
+      } else if (Array.isArray(parsedValue)) {
+        loadSlides(parsedValue);
         setIsTestOpen(false);
         setJsonInput('');
         toast.success(t('editor.toolbar.slidesLoaded'));
@@ -81,25 +128,44 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
         toast.error(t('editor.toolbar.invalidJsonArray'));
       }
     } catch (error) {
+      console.error('Failed to parse slider JSON', error);
       toast.error(t('editor.toolbar.invalidJson'));
     }
   };
 
-  return (
-    <div className="h-14 border-b bg-card flex items-center justify-between px-4 shrink-0">
-      <div className="flex items-center gap-2">
-        <h1 className="font-bold text-lg mr-4">{t('editor.toolbar.title')}</h1>
+  const handlePublish = async () => {
+    const payload = createSavePayload();
 
-        <div className="flex items-center bg-secondary rounded-md p-1">
+    try {
+      await onSave?.(payload);
+      publishSlides(slides);
+      onDemoSave?.(slides);
+      markSaved();
+      toast.success(t('editor.toolbar.saved'));
+    } catch (error) {
+      console.error('Failed to save slider', error);
+      toast.error(t('editor.toolbar.saveFailed'));
+    }
+  };
+
+  return (
+    <div className="msp-h-14 msp-border-b msp-bg-card msp-flex msp-items-center msp-justify-between msp-px-4 msp-shrink-0">
+      <div className="msp-flex msp-items-center msp-gap-2">
+        <h1 className="msp-font-bold msp-text-lg msp-mr-4">{t('editor.toolbar.title')}</h1>
+
+        <div className="msp-flex msp-items-center msp-bg-secondary msp-rounded-md msp-p-1">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
                   variant={viewMode === 'desktop' ? 'default' : 'ghost'}
                   size="sm"
-                  onClick={() => setViewMode('desktop')}
+                  onClick={() => {
+                    setViewMode('desktop');
+                    setPropertyMode('desktop');
+                  }}
                 >
-                  <Monitor className="h-4 w-4" />
+                  <Monitor className="msp-h-4 msp-w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t('editor.toolbar.desktopView')}</TooltipContent>
@@ -112,9 +178,12 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
                 <Button
                   variant={viewMode === 'tablet' ? 'default' : 'ghost'}
                   size="sm"
-                  onClick={() => setViewMode('tablet')}
+                  onClick={() => {
+                    setViewMode('tablet');
+                    setPropertyMode('tablet');
+                  }}
                 >
-                  <Tablet className="h-4 w-4" />
+                  <Tablet className="msp-h-4 msp-w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Tablet (768×1024)</TooltipContent>
@@ -127,30 +196,86 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
                 <Button
                   variant={viewMode === 'mobile' ? 'default' : 'ghost'}
                   size="sm"
-                  onClick={() => setViewMode('mobile')}
+                  onClick={() => {
+                    setViewMode('mobile');
+                    setPropertyMode('mobile');
+                  }}
                 >
-                  <Smartphone className="h-4 w-4" />
+                  <Smartphone className="msp-h-4 msp-w-4" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t('editor.toolbar.mobileView')}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
-      </div>
 
-      <div className="flex items-center gap-2">
-        <div className="flex items-center gap-2 mr-2">
+        <div className="msp-flex msp-items-center msp-gap-1 msp-ml-2">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={undo} disabled={!canUndo}>
+                  <Undo2 className="msp-h-4 msp-w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('editor.toolbar.undo')}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="sm" onClick={redo} disabled={!canRedo}>
+                  <Redo2 className="msp-h-4 msp-w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('editor.toolbar.redo')}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
+        <div className="msp-flex msp-items-center msp-gap-1 msp-ml-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="sm" onClick={groupSelectedElements} disabled={!canGroup}>
+                  <Group className="msp-h-4 msp-w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Seçili öğeleri grupla</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => selectedElementId && ungroupElement(selectedElementId)}
+                  disabled={!canUngroup}
+                >
+                  <Ungroup className="msp-h-4 msp-w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Grubu çöz</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
+
+      <div className="msp-flex msp-items-center msp-gap-2">
+        <div className="msp-flex msp-items-center msp-gap-2 msp-mr-2">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div className="msp-flex msp-items-center msp-gap-2">
                   <Switch
                     id="show-borders"
                     checked={showBorders}
                     onCheckedChange={setShowBorders}
                   />
-                  <Label htmlFor="show-borders" className="cursor-pointer">
-                    <Grid className="h-4 w-4" />
+                  <Label htmlFor="show-borders" className="msp-cursor-pointer">
+                    <Grid className="msp-h-4 msp-w-4" />
                   </Label>
                 </div>
               </TooltipTrigger>
@@ -165,52 +290,52 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" onClick={() => setIsCanvasSettingsOpen(true)}>
-                  <LayoutGrid className="h-5 w-5" />
+                  <LayoutGrid className="msp-h-5 msp-w-5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Canvas Ayarları</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <DialogContent className="max-w-sm">
+          <DialogContent className="msp-max-w-sm">
             <DialogHeader>
               <DialogTitle>Canvas Ayarları</DialogTitle>
               <DialogDescription>Canvas boyutu, grid ve hizalama çizgisi ayarlarını yapın.</DialogDescription>
             </DialogHeader>
-            <div className="space-y-5 py-2">
+            <div className="msp-space-y-5 msp-py-2">
               {/* Canvas Size */}
-              <div className="space-y-2">
+              <div className="msp-space-y-2">
                 <Label>Canvas Boyutu</Label>
-                <div className="grid grid-cols-2 gap-2">
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Genişlik (px)</Label>
+                <div className="msp-grid msp-grid-cols-2 msp-gap-2">
+                  <div className="msp-space-y-1">
+                    <Label className="msp-text-xs msp-text-muted-foreground">Genişlik (px)</Label>
                     <Input
                       type="number"
-                      className="h-7 text-xs"
+                      className="msp-h-7 msp-text-xs"
                       value={canvasSettings.canvasWidth}
                       min={100}
                       max={3840}
                       onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        if (!isNaN(val) && val >= 100) updateCanvasSettings({ canvasWidth: val });
+                        const val = Number.parseInt(e.target.value);
+                        if (!Number.isNaN(val) && val >= 100) updateCanvasSettings({ canvasWidth: val });
                       }}
                     />
                   </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs text-muted-foreground">Yükseklik (px)</Label>
+                  <div className="msp-space-y-1">
+                    <Label className="msp-text-xs msp-text-muted-foreground">Yükseklik (px)</Label>
                     <Input
                       type="number"
-                      className="h-7 text-xs"
+                      className="msp-h-7 msp-text-xs"
                       value={canvasSettings.canvasHeight}
                       min={100}
                       max={2160}
                       onChange={(e) => {
-                        const val = parseInt(e.target.value);
-                        if (!isNaN(val) && val >= 100) updateCanvasSettings({ canvasHeight: val });
+                        const val = Number.parseInt(e.target.value);
+                        if (!Number.isNaN(val) && val >= 100) updateCanvasSettings({ canvasHeight: val });
                       }}
                     />
                   </div>
                 </div>
-                <div className="flex gap-1.5 flex-wrap pt-1">
+                <div className="msp-flex msp-gap-1.5 msp-flex-wrap msp-pt-1">
                   {[
                     { label: '16:9', w: 1280, h: 720 },
                     { label: '4:3', w: 1024, h: 768 },
@@ -221,7 +346,7 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
                       key={label}
                       variant={canvasSettings.canvasWidth === w && canvasSettings.canvasHeight === h ? 'default' : 'outline'}
                       size="sm"
-                      className="h-7 text-xs px-2.5"
+                      className="msp-h-7 msp-text-xs msp-px-2.5"
                       onClick={() => updateCanvasSettings({ canvasWidth: w, canvasHeight: h })}
                     >
                       {label}
@@ -230,10 +355,10 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
                 </div>
               </div>
 
-              <div className="border-t" />
+              <div className="msp-border-t" />
 
               {/* Grid Toggle */}
-              <div className="flex items-center justify-between">
+              <div className="msp-flex msp-items-center msp-justify-between">
                 <Label htmlFor="tb-showGrid">Grid Göster</Label>
                 <Switch
                   id="tb-showGrid"
@@ -244,15 +369,15 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
 
               {/* Grid Size */}
               {canvasSettings.showGrid && (
-                <div className="space-y-2">
+                <div className="msp-space-y-2">
                   <Label>Grid Boyutu</Label>
-                  <div className="flex gap-1.5 flex-wrap">
+                  <div className="msp-flex msp-gap-1.5 msp-flex-wrap">
                     {GRID_PRESETS.map(size => (
                       <Button
                         key={size}
                         variant={canvasSettings.gridSize === size && !showCustomGrid ? 'default' : 'outline'}
                         size="sm"
-                        className="h-7 text-xs px-2.5"
+                        className="msp-h-7 msp-text-xs msp-px-2.5"
                         onClick={() => { updateCanvasSettings({ gridSize: size }); setShowCustomGrid(false); }}
                       >
                         {size}px
@@ -261,38 +386,38 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
                     <Button
                       variant={showCustomGrid ? 'default' : 'outline'}
                       size="sm"
-                      className="h-7 text-xs px-2.5"
+                      className="msp-h-7 msp-text-xs msp-px-2.5"
                       onClick={() => setShowCustomGrid(v => !v)}
                     >
                       Özel
                     </Button>
                   </div>
                   {showCustomGrid && (
-                    <div className="flex items-center gap-2 pt-1">
+                    <div className="msp-flex msp-items-center msp-gap-2 msp-pt-1">
                       <Input
                         type="number"
-                        className="h-7 text-xs"
+                        className="msp-h-7 msp-text-xs"
                         placeholder="px"
                         defaultValue={canvasSettings.gridSize}
                         min={5}
                         max={500}
                         autoFocus
                         onChange={(e) => {
-                          const val = parseInt(e.target.value);
-                          if (!isNaN(val) && val >= 5) updateCanvasSettings({ gridSize: val });
+                          const val = Number.parseInt(e.target.value);
+                          if (!Number.isNaN(val) && val >= 5) updateCanvasSettings({ gridSize: val });
                         }}
                       />
-                      <span className="text-xs text-muted-foreground">px</span>
+                      <span className="msp-text-xs msp-text-muted-foreground">px</span>
                     </div>
                   )}
                 </div>
               )}
 
               {/* Snap Guides */}
-              <div className="flex items-center justify-between">
+              <div className="msp-flex msp-items-center msp-justify-between">
                 <div>
                   <Label htmlFor="tb-snapGuides">Hizalama Çizgileri</Label>
-                  <p className="text-xs text-muted-foreground mt-0.5">Sürüklerken Photoshop gibi hizalama kılavuzları</p>
+                  <p className="msp-text-xs msp-text-muted-foreground msp-mt-0.5">Sürüklerken Photoshop gibi hizalama kılavuzları</p>
                 </div>
                 <Switch
                   id="tb-snapGuides"
@@ -310,19 +435,19 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" size="icon" onClick={() => setIsSliderSettingsOpen(true)}>
-                  <SlidersHorizontal className="h-5 w-5" />
+                  <SlidersHorizontal className="msp-h-5 msp-w-5" />
                 </Button>
               </TooltipTrigger>
               <TooltipContent>Slider Ayarları</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <DialogContent className="max-w-sm">
+          <DialogContent className="msp-max-w-sm">
             <DialogHeader>
               <DialogTitle>Slider Ayarları</DialogTitle>
               <DialogDescription>Slider'in genel davranışını buradan ayarlayın.</DialogDescription>
             </DialogHeader>
-            <div className="space-y-5 py-2">
-              <div className="flex items-center justify-between">
+            <div className="msp-space-y-5 msp-py-2">
+              <div className="msp-flex msp-items-center msp-justify-between">
                 <Label htmlFor="tb-autoPlay">{t('editor.properties.autoPlay')}</Label>
                 <Switch
                   id="tb-autoPlay"
@@ -331,22 +456,22 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
                 />
               </div>
               {settings.autoPlay && (
-                <div className="space-y-2">
+                <div className="msp-space-y-2">
                   <Label>{t('editor.properties.interval')}</Label>
-                  <div className="flex items-center gap-3">
+                  <div className="msp-flex msp-items-center msp-gap-3">
                     <SliderInput
                       value={[settings.interval]}
                       min={1}
                       max={20}
                       step={1}
                       onValueChange={([val]) => updateSettings({ interval: val })}
-                      className="flex-1"
+                      className="msp-flex-1"
                     />
-                    <span className="w-8 text-right text-sm">{settings.interval}s</span>
+                    <span className="msp-w-8 msp-text-right msp-text-sm">{settings.interval}s</span>
                   </div>
                 </div>
               )}
-              <div className="flex items-center justify-between">
+              <div className="msp-flex msp-items-center msp-justify-between">
                 <Label htmlFor="tb-loop">{t('editor.properties.loop')}</Label>
                 <Switch
                   id="tb-loop"
@@ -354,7 +479,7 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
                   onCheckedChange={(checked) => updateSettings({ loop: checked })}
                 />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="msp-flex msp-items-center msp-justify-between">
                 <Label htmlFor="tb-showArrows">{t('editor.properties.showArrows')}</Label>
                 <Switch
                   id="tb-showArrows"
@@ -362,7 +487,7 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
                   onCheckedChange={(checked) => updateSettings({ showArrows: checked })}
                 />
               </div>
-              <div className="flex items-center justify-between">
+              <div className="msp-flex msp-items-center msp-justify-between">
                 <Label htmlFor="tb-showDots">{t('editor.properties.showDots')}</Label>
                 <Switch
                   id="tb-showDots"
@@ -380,7 +505,7 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
               <TooltipTrigger asChild>
                 <DialogTrigger asChild>
                   <Button variant="ghost" size="icon">
-                    <Settings className="h-5 w-5" />
+                    <Settings className="msp-h-5 msp-w-5" />
                   </Button>
                 </DialogTrigger>
               </TooltipTrigger>
@@ -391,15 +516,15 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
             <DialogHeader>
               <DialogTitle>{t('settings.title')}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="flex items-center justify-between">
+            <div className="msp-space-y-4 msp-py-4">
+              <div className="msp-flex msp-items-center msp-justify-between">
                 <Label>{t('settings.theme')}</Label>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm">{theme === 'dark' ? t('settings.darkMode') : t('settings.lightMode')}</span>
+                <div className="msp-flex msp-items-center msp-gap-2">
+                  <span className="msp-text-sm">{theme === 'dark' ? t('settings.darkMode') : t('settings.lightMode')}</span>
                   <Switch checked={theme === 'dark'} onCheckedChange={toggleTheme} />
                 </div>
               </div>
-              <div className="space-y-2">
+              <div className="msp-space-y-2">
                 <Label>{t('settings.language')}</Label>
                 <Select value={language} onValueChange={(val: 'en' | 'tr') => setLanguage(val)}>
                   <SelectTrigger>
@@ -421,24 +546,24 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="sm" onClick={handleSave}>
-                  <Save className="h-4 w-4 mr-2" /> {t('editor.toolbar.save')}
+                  <Save className="msp-h-4 msp-w-4 msp-mr-2" /> {t('editor.toolbar.save')}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t('editor.toolbar.exportJson')}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="msp-max-w-2xl">
             <DialogHeader>
               <DialogTitle>{t('editor.toolbar.exportTitle')}</DialogTitle>
               <DialogDescription>
                 {t('editor.toolbar.exportDesc')}
               </DialogDescription>
             </DialogHeader>
-            <div className="py-4">
+            <div className="msp-py-4">
               <Textarea
                 value={jsonOutput}
                 readOnly
-                className="h-[300px] font-mono text-xs"
+                className="msp-h-[300px] msp-font-mono msp-text-xs"
               />
             </div>
             <DialogFooter>
@@ -453,25 +578,25 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="outline" size="sm" onClick={() => setIsTestOpen(true)}>
-                  <Terminal className="h-4 w-4 mr-2" /> {t('editor.toolbar.test')}
+                  <Terminal className="msp-h-4 msp-w-4 msp-mr-2" /> {t('editor.toolbar.test')}
                 </Button>
               </TooltipTrigger>
               <TooltipContent>{t('editor.toolbar.importJson')}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <DialogContent className="max-w-2xl">
+          <DialogContent className="msp-max-w-2xl">
             <DialogHeader>
               <DialogTitle>{t('editor.toolbar.importTitle')}</DialogTitle>
               <DialogDescription>
                 {t('editor.toolbar.importDesc')}
               </DialogDescription>
             </DialogHeader>
-            <div className="py-4">
+            <div className="msp-py-4">
               <Textarea
                 value={jsonInput}
                 onChange={(e) => setJsonInput(e.target.value)}
                 placeholder={t('editor.toolbar.pasteJson')}
-                className="h-[300px] font-mono text-xs"
+                className="msp-h-[300px] msp-font-mono msp-text-xs"
               />
             </div>
             <DialogFooter>
@@ -483,15 +608,15 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
         <Button
           variant={isPlaying ? "destructive" : "default"}
           onClick={togglePlay}
-          className="w-32"
+          className="msp-w-32"
         >
           {isPlaying ? (
             <>
-              <Square className="h-4 w-4 mr-2" /> {t('editor.toolbar.stop')}
+              <Square className="msp-h-4 msp-w-4 msp-mr-2" /> {t('editor.toolbar.stop')}
             </>
           ) : (
             <>
-              <Play className="h-4 w-4 mr-2" /> {t('editor.toolbar.preview')}
+              <Play className="msp-h-4 msp-w-4 msp-mr-2" /> {t('editor.toolbar.preview')}
             </>
           )}
         </Button>
@@ -501,16 +626,13 @@ const Toolbar = ({ onDemoSave }: { onDemoSave?: () => void }) => {
               <Button
                 variant="secondary"
                 size="sm"
-                onClick={() => {
-                  publishSlides(slides);
-                  toast.success('Demo güncellendi!');
-                  onDemoSave?.();
-                }}
+                onClick={handlePublish}
               >
-                <Upload className="h-4 w-4 mr-2" /> Demo'ya Kaydet
+                <Upload className="msp-h-4 msp-w-4 msp-mr-2" /> {saveButtonLabel ?? t('editor.toolbar.publishDemo')}
+                {isDirty ? ' *' : ''}
               </Button>
             </TooltipTrigger>
-            <TooltipContent>Slaytları demo sayfasına yayınla (geçici)</TooltipContent>
+            <TooltipContent>{t('editor.toolbar.publishDemoTooltip')}</TooltipContent>
           </Tooltip>
         </TooltipProvider>
       </div>

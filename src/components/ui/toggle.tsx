@@ -5,17 +5,17 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const toggleVariants = cva(
-  'inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors hover:bg-muted hover:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=on]:bg-accent data-[state=on]:text-accent-foreground',
+  'msp-inline-flex msp-items-center msp-justify-center msp-rounded-md msp-text-sm msp-font-medium msp-ring-offset-background msp-transition-colors hover:msp-bg-muted hover:msp-text-muted-foreground focus-visible:msp-outline-none focus-visible:msp-ring-2 focus-visible:msp-ring-ring focus-visible:msp-ring-offset-2 disabled:msp-pointer-events-none disabled:msp-opacity-50 data-[state=on]:msp-bg-accent data-[state=on]:msp-text-accent-foreground',
   {
     variants: {
       variant: {
         default: 'bg-transparent',
-        outline: 'border border-input bg-transparent hover:bg-accent hover:text-accent-foreground',
+        outline: 'msp-border msp-border-input msp-bg-transparent hover:msp-bg-accent hover:msp-text-accent-foreground',
       },
       size: {
-        default: 'h-10 px-3',
-        sm: 'h-9 px-2.5',
-        lg: 'h-11 px-5',
+        default: 'msp-h-10 msp-px-3',
+        sm: 'msp-h-9 msp-px-2.5',
+        lg: 'msp-h-11 msp-px-5',
       },
     },
     defaultVariants: {

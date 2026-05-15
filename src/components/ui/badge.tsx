@@ -4,13 +4,13 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const badgeVariants = cva(
-  'inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2',
+  'msp-inline-flex msp-items-center msp-rounded-full msp-border msp-px-2.5 msp-py-0.5 msp-text-xs msp-font-semibold msp-transition-colors focus:msp-outline-none focus:msp-ring-2 focus:msp-ring-ring focus:msp-ring-offset-2',
   {
     variants: {
       variant: {
-        default: 'border-transparent bg-primary text-primary-foreground hover:bg-primary/80',
-        secondary: 'border-transparent bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        destructive: 'border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/80',
+        default: 'msp-border-transparent msp-bg-primary msp-text-primary-foreground hover:msp-bg-primary/80',
+        secondary: 'msp-border-transparent msp-bg-secondary msp-text-secondary-foreground hover:msp-bg-secondary/80',
+        destructive: 'msp-border-transparent msp-bg-destructive msp-text-destructive-foreground hover:msp-bg-destructive/80',
         outline: 'text-foreground',
       },
     },

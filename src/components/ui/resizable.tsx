@@ -5,7 +5,7 @@ import { cn } from '@/lib/utils';
 
 const ResizablePanelGroup = ({ className, ...props }: React.ComponentProps<typeof ResizablePrimitive.PanelGroup>) => (
   <ResizablePrimitive.PanelGroup
-    className={cn('flex h-full w-full data-[panel-group-direction=vertical]:flex-col', className)}
+    className={cn('msp-flex msp-h-full msp-w-full data-[panel-group-direction=vertical]:msp-flex-col', className)}
     {...props}
   />
 );
@@ -21,14 +21,14 @@ const ResizableHandle = ({
 }) => (
   <ResizablePrimitive.PanelResizeHandle
     className={cn(
-      'relative flex w-px items-center justify-center bg-border after:absolute after:inset-y-0 after:left-1/2 after:w-1 after:-translate-x-1/2 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring focus-visible:ring-offset-1 data-[panel-group-direction=vertical]:h-px data-[panel-group-direction=vertical]:w-full data-[panel-group-direction=vertical]:after:left-0 data-[panel-group-direction=vertical]:after:h-1 data-[panel-group-direction=vertical]:after:w-full data-[panel-group-direction=vertical]:after:-translate-y-1/2 data-[panel-group-direction=vertical]:after:translate-x-0 [&[data-panel-group-direction=vertical]>div]:rotate-90',
+      'msp-relative msp-flex msp-w-px msp-items-center msp-justify-center msp-bg-border after:msp-absolute after:msp-inset-y-0 after:msp-left-1/2 after:msp-w-1 after:-msp-translate-x-1/2 focus-visible:msp-outline-none focus-visible:msp-ring-1 focus-visible:msp-ring-ring focus-visible:msp-ring-offset-1 data-[panel-group-direction=vertical]:msp-h-px data-[panel-group-direction=vertical]:msp-w-full data-[panel-group-direction=vertical]:after:msp-left-0 data-[panel-group-direction=vertical]:after:msp-h-1 data-[panel-group-direction=vertical]:after:msp-w-full data-[panel-group-direction=vertical]:after:-msp-translate-y-1/2 data-[panel-group-direction=vertical]:after:msp-translate-x-0 [&[data-panel-group-direction=vertical]>div]:msp-rotate-90',
       className
     )}
     {...props}
   >
     {withHandle && (
-      <div className="z-10 flex h-4 w-3 items-center justify-center rounded-sm border bg-border">
-        <GripVertical className="h-2.5 w-2.5" />
+      <div className="msp-z-10 msp-flex msp-h-4 msp-w-3 msp-items-center msp-justify-center msp-rounded-sm msp-border msp-bg-border">
+        <GripVertical className="msp-h-2.5 msp-w-2.5" />
       </div>
     )}
   </ResizablePrimitive.PanelResizeHandle>

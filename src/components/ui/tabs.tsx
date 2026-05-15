@@ -9,7 +9,7 @@ const TabsList = React.forwardRef<React.ElementRef<typeof TabsPrimitive.List>, R
   ({ className, ...props }, ref) => (
     <TabsPrimitive.List
       ref={ref}
-      className={cn('inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground', className)}
+      className={cn('msp-inline-flex msp-h-10 msp-items-center msp-justify-center msp-rounded-md msp-bg-muted msp-p-1 msp-text-muted-foreground', className)}
       {...props}
     />
   )
@@ -23,7 +23,7 @@ const TabsTrigger = React.forwardRef<
   <TabsPrimitive.Trigger
     ref={ref}
     className={cn(
-      'inline-flex items-center justify-center whitespace-nowrap rounded-sm px-3 py-1.5 text-sm font-medium ring-offset-background transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-sm',
+      'msp-inline-flex msp-items-center msp-justify-center msp-whitespace-nowrap msp-rounded-sm msp-px-3 msp-py-1.5 msp-text-sm msp-font-medium msp-ring-offset-background msp-transition-all focus-visible:msp-outline-none focus-visible:msp-ring-2 focus-visible:msp-ring-ring focus-visible:msp-ring-offset-2 disabled:msp-pointer-events-none disabled:msp-opacity-50 data-[state=active]:msp-bg-background data-[state=active]:msp-text-foreground data-[state=active]:msp-shadow-sm',
       className
     )}
     {...props}
@@ -38,7 +38,7 @@ const TabsContent = React.forwardRef<
   <TabsPrimitive.Content
     ref={ref}
     className={cn(
-      'mt-2 ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+      'msp-mt-2 msp-ring-offset-background focus-visible:msp-outline-none focus-visible:msp-ring-2 focus-visible:msp-ring-ring focus-visible:msp-ring-offset-2',
       className
     )}
     {...props}

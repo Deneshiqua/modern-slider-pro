@@ -15,14 +15,14 @@ Breadcrumb.displayName = 'Breadcrumb';
 const BreadcrumbList = React.forwardRef<HTMLOListElement, React.ComponentPropsWithoutRef<'ol'>>(({ className, ...props }, ref) => (
   <ol
     ref={ref}
-    className={cn('flex flex-wrap items-center gap-1.5 break-words text-sm text-muted-foreground sm:gap-2.5', className)}
+    className={cn('msp-flex msp-flex-wrap msp-items-center msp-gap-1.5 msp-break-words msp-text-sm msp-text-muted-foreground sm:msp-gap-2.5', className)}
     {...props}
   />
 ));
 BreadcrumbList.displayName = 'BreadcrumbList';
 
 const BreadcrumbItem = React.forwardRef<HTMLLIElement, React.ComponentPropsWithoutRef<'li'>>(({ className, ...props }, ref) => (
-  <li ref={ref} className={cn('inline-flex items-center gap-1.5', className)} {...props} />
+  <li ref={ref} className={cn('msp-inline-flex msp-items-center msp-gap-1.5', className)} {...props} />
 ));
 BreadcrumbItem.displayName = 'BreadcrumbItem';
 
@@ -34,7 +34,7 @@ const BreadcrumbLink = React.forwardRef<
 >(({ asChild, className, ...props }, ref) => {
   const Comp = asChild ? Slot : 'a';
 
-  return <Comp ref={ref} className={cn('transition-colors hover:text-foreground', className)} {...props} />;
+  return <Comp ref={ref} className={cn('msp-transition-colors hover:msp-text-foreground', className)} {...props} />;
 });
 BreadcrumbLink.displayName = 'BreadcrumbLink';
 
@@ -44,7 +44,7 @@ const BreadcrumbPage = React.forwardRef<HTMLSpanElement, React.ComponentPropsWit
     role="link"
     aria-disabled="true"
     aria-current="page"
-    className={cn('font-normal text-foreground', className)}
+    className={cn('msp-font-normal msp-text-foreground', className)}
     {...props}
   />
 ));
@@ -58,9 +58,9 @@ const BreadcrumbSeparator = ({ children, className, ...props }: React.ComponentP
 BreadcrumbSeparator.displayName = 'BreadcrumbSeparator';
 
 const BreadcrumbEllipsis = ({ className, ...props }: React.ComponentProps<'span'>) => (
-  <span role="presentation" aria-hidden="true" className={cn('flex h-9 w-9 items-center justify-center', className)} {...props}>
-    <MoreHorizontal className="h-4 w-4" />
-    <span className="sr-only">More</span>
+  <span role="presentation" aria-hidden="true" className={cn('msp-flex msp-h-9 msp-w-9 msp-items-center msp-justify-center', className)} {...props}>
+    <MoreHorizontal className="msp-h-4 msp-w-4" />
+    <span className="msp-sr-only">More</span>
   </span>
 );
 BreadcrumbEllipsis.displayName = 'BreadcrumbElipssis';

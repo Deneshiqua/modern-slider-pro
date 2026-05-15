@@ -46,39 +46,39 @@ const ContextMenu = ({ children, elementId }: ContextMenuProps) => {
     <UIContextMenu>
       <ContextMenuTrigger>
         {/* Wrapper to ensure ref is passed correctly and events are captured */}
-        <span className="block" style={{ display: 'contents' }}>
+        <span className="msp-block" style={{ display: 'contents' }}>
           {children}
         </span>
       </ContextMenuTrigger>
-      <ContextMenuContent className="w-64">
+      <ContextMenuContent className="msp-w-64">
         <ContextMenuItem onClick={() => bringToFront(elementId)}>
-          <BringToFront className="mr-2 h-4 w-4" />
+          <BringToFront className="msp-mr-2 msp-h-4 msp-w-4" />
           {t('editor.contextMenu.bringToFront')}
         </ContextMenuItem>
         <ContextMenuItem onClick={() => bringForward(elementId)}>
-          <ArrowUp className="mr-2 h-4 w-4" />
+          <ArrowUp className="msp-mr-2 msp-h-4 msp-w-4" />
           {t('editor.contextMenu.bringForward')}
         </ContextMenuItem>
         <ContextMenuItem onClick={() => sendBackward(elementId)}>
-          <ArrowDown className="mr-2 h-4 w-4" />
+          <ArrowDown className="msp-mr-2 msp-h-4 msp-w-4" />
           {t('editor.contextMenu.sendBackward')}
         </ContextMenuItem>
         <ContextMenuItem onClick={() => sendToBack(elementId)}>
-          <SendToBack className="mr-2 h-4 w-4" />
+          <SendToBack className="msp-mr-2 msp-h-4 msp-w-4" />
           {t('editor.contextMenu.sendToBack')}
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onClick={handleFit}>
-          <Maximize className="mr-2 h-4 w-4" />
+          <Maximize className="msp-mr-2 msp-h-4 msp-w-4" />
           {t('editor.contextMenu.fit')}
         </ContextMenuItem>
         <ContextMenuSeparator />
         <ContextMenuItem onClick={handleDuplicate}>
-          <Copy className="mr-2 h-4 w-4" />
+          <Copy className="msp-mr-2 msp-h-4 msp-w-4" />
           {t('editor.contextMenu.duplicate')}
         </ContextMenuItem>
-        <ContextMenuItem onClick={() => removeElement(elementId)} className="text-red-600">
-          <Trash2 className="mr-2 h-4 w-4" />
+        <ContextMenuItem onClick={() => removeElement(elementId)} className="msp-text-red-600">
+          <Trash2 className="msp-mr-2 msp-h-4 msp-w-4" />
           {t('editor.contextMenu.delete')}
         </ContextMenuItem>
       </ContextMenuContent>

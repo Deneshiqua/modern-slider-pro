@@ -1,4 +1,4 @@
-import { AnimationConfig, CanvasSettings, Slide, SliderSettings } from '@/types/editor';
+import { AnimationConfig, CanvasSettings, Slide, SliderSettings, ViewMode } from '@/types/editor';
 
 export const DEFAULT_SLIDE: Omit<Slide, 'id'> = {
   backgroundColor: '#ffffff',
@@ -21,6 +21,20 @@ export const VIEWPORT_SIZE = {
   desktop: { width: 1280, height: 720 },
   tablet: { width: 768, height: 1024 },
   mobile: { width: 375, height: 667 }
+};
+
+export const getEditorViewportSize = (
+  viewMode: ViewMode,
+  canvasSettings: CanvasSettings,
+) => {
+  if (viewMode === 'desktop') {
+    return {
+      width: canvasSettings.canvasWidth ?? VIEWPORT_SIZE.desktop.width,
+      height: canvasSettings.canvasHeight ?? VIEWPORT_SIZE.desktop.height,
+    };
+  }
+
+  return VIEWPORT_SIZE[viewMode];
 };
 
 export const DEFAULT_CANVAS_SETTINGS: CanvasSettings = {

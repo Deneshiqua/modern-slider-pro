@@ -135,8 +135,8 @@ const CarouselContent = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HT
   const { carouselRef, orientation } = useCarousel();
 
   return (
-    <div ref={carouselRef} className="overflow-hidden">
-      <div ref={ref} className={cn('flex', orientation === 'horizontal' ? '-ml-4' : '-mt-4 flex-col', className)} {...props} />
+    <div ref={carouselRef} className="msp-overflow-hidden">
+      <div ref={ref} className={cn('flex', orientation === 'horizontal' ? '-ml-4' : '-msp-mt-4 msp-flex-col', className)} {...props} />
     </div>
   );
 });
@@ -150,7 +150,7 @@ const CarouselItem = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLD
       ref={ref}
       role="group"
       aria-roledescription="slide"
-      className={cn('min-w-0 shrink-0 grow-0 basis-full', orientation === 'horizontal' ? 'pl-4' : 'pt-4', className)}
+      className={cn('msp-min-w-0 msp-shrink-0 msp-grow-0 msp-basis-full', orientation === 'horizontal' ? 'pl-4' : 'pt-4', className)}
       {...props}
     />
   );
@@ -167,16 +167,16 @@ const CarouselPrevious = React.forwardRef<HTMLButtonElement, React.ComponentProp
         variant={variant}
         size={size}
         className={cn(
-          'absolute  h-8 w-8 rounded-full',
-          orientation === 'horizontal' ? '-left-12 top-1/2 -translate-y-1/2' : '-top-12 left-1/2 -translate-x-1/2 rotate-90',
+          'msp-absolute  msp-h-8 msp-w-8 msp-rounded-full',
+          orientation === 'horizontal' ? '-msp-left-12 msp-top-1/2 -msp-translate-y-1/2' : '-msp-top-12 msp-left-1/2 -msp-translate-x-1/2 msp-rotate-90',
           className
         )}
         disabled={!canScrollPrev}
         onClick={scrollPrev}
         {...props}
       >
-        <ArrowLeft className="h-4 w-4" />
-        <span className="sr-only">Previous slide</span>
+        <ArrowLeft className="msp-h-4 msp-w-4" />
+        <span className="msp-sr-only">Previous slide</span>
       </Button>
     );
   }
@@ -193,16 +193,16 @@ const CarouselNext = React.forwardRef<HTMLButtonElement, React.ComponentProps<ty
         variant={variant}
         size={size}
         className={cn(
-          'absolute h-8 w-8 rounded-full',
-          orientation === 'horizontal' ? '-right-12 top-1/2 -translate-y-1/2' : '-bottom-12 left-1/2 -translate-x-1/2 rotate-90',
+          'msp-absolute msp-h-8 msp-w-8 msp-rounded-full',
+          orientation === 'horizontal' ? '-msp-right-12 msp-top-1/2 -msp-translate-y-1/2' : '-msp-bottom-12 msp-left-1/2 -msp-translate-x-1/2 msp-rotate-90',
           className
         )}
         disabled={!canScrollNext}
         onClick={scrollNext}
         {...props}
       >
-        <ArrowRight className="h-4 w-4" />
-        <span className="sr-only">Next slide</span>
+        <ArrowRight className="msp-h-4 msp-w-4" />
+        <span className="msp-sr-only">Next slide</span>
       </Button>
     );
   }

@@ -1,9 +1,10 @@
 import React, { useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEditor } from '@/context/EditorContext';
-import { VIEWPORT_SIZE } from '@/lib/constants';
+import { getEditorViewportSize } from '@/lib/constants';
 import DraggableElement from './DraggableElement';
 import { cn } from '@/lib/utils';
+import { resolveElementProperties } from '@/lib/responsive';
 import { useTheme } from '@/context/ThemeContext';
 
 const Canvas = () => {
@@ -13,22 +14,20 @@ const Canvas = () => {
     setCurrentSlide,
     viewMode,
     selectElement,
+    selectedElementIds,
     selectedElementId,
     isPlaying,
-    removeElement,
-    updateElement,
+    removeSelectedElements,
+    updateElementsForMode,
     canvasSettings,
     snapGuides,
     settings,
+    propertyMode,
   } = useEditor();
 
   const { theme } = useTheme();
   const currentSlide = slides[currentSlideIndex];
-  const viewportBase = VIEWPORT_SIZE[viewMode];
-  const viewport = {
-    width: canvasSettings.canvasWidth ?? viewportBase.width,
-    height: canvasSettings.canvasHeight ?? viewportBase.height,
-  };
+  const viewport = getEditorViewportSize(viewMode, canvasSettings);
 
   // Autoplay in preview mode
   useEffect(() => {
@@ -63,32 +62,47 @@ const Canvas = () => {
         return;
       }
 
-      if (selectedElementId) {
-        const step = e.shiftKey ? 10 : 1;
-        const currentElement = slides[currentSlideIndex].elements.find(el => el.id === selectedElementId);
+      const activeSelectionIds = selectedElementIds.length ? selectedElementIds : selectedElementId ? [selectedElementId] : [];
 
-        if (!currentElement) return;
+      if (activeSelectionIds.length) {
+        const step = e.shiftKey ? 10 : 1;
+        const selectedRootElements = slides[currentSlideIndex].elements.filter(el => activeSelectionIds.includes(el.id) && !el.isLocked);
+        if (!selectedRootElements.length) return;
+
+        const moveSelectedElements = (deltaX: number, deltaY: number) => {
+          const updates = selectedRootElements.reduce<Record<string, { x: number; y: number }>>((acc, element) => {
+            const renderedElement = resolveElementProperties(element, viewMode);
+            acc[element.id] = {
+              x: renderedElement.x + deltaX,
+              y: renderedElement.y + deltaY,
+            };
+            return acc;
+          }, {});
+
+          updateElementsForMode(updates, propertyMode);
+        };
 
         switch (e.key) {
           case 'Delete':
           case 'Backspace':
-            removeElement(selectedElementId);
+            e.preventDefault();
+            removeSelectedElements();
             break;
           case 'ArrowLeft':
             e.preventDefault();
-            updateElement(selectedElementId, { x: currentElement.x - step });
+            moveSelectedElements(-step, 0);
             break;
           case 'ArrowRight':
             e.preventDefault();
-            updateElement(selectedElementId, { x: currentElement.x + step });
+            moveSelectedElements(step, 0);
             break;
           case 'ArrowUp':
             e.preventDefault();
-            updateElement(selectedElementId, { y: currentElement.y - step });
+            moveSelectedElements(0, -step);
             break;
           case 'ArrowDown':
             e.preventDefault();
-            updateElement(selectedElementId, { y: currentElement.y + step });
+            moveSelectedElements(0, step);
             break;
         }
       }
@@ -96,7 +110,17 @@ const Canvas = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedElementId, isPlaying, slides, currentSlideIndex, removeElement, updateElement]);
+  }, [
+    selectedElementId,
+    selectedElementIds,
+    isPlaying,
+    slides,
+    currentSlideIndex,
+    viewMode,
+    propertyMode,
+    removeSelectedElements,
+    updateElementsForMode,
+  ]);
 
   const handleBackgroundClick = () => {
     selectElement(null);
@@ -152,22 +176,22 @@ const Canvas = () => {
   };
 
   return (
-    <div className="flex-1 bg-gray-100 dark:bg-black overflow-auto flex items-center justify-center p-8">
+    <div className="msp-flex-1 msp-bg-muted msp-overflow-auto msp-flex msp-items-center msp-justify-center msp-p-8">
       <div
         className={cn(
-          "relative shadow-xl transition-all duration-300 overflow-hidden",
-          viewMode === 'mobile' ? "border-[8px] border-gray-800 rounded-[30px]" : "border border-gray-300 dark:border-gray-700"
+          "msp-relative msp-shadow-xl msp-transition-all msp-duration-300 msp-overflow-hidden",
+          viewMode === 'mobile' ? "msp-border-[8px] msp-border-gray-800 msp-rounded-[30px]" : "msp-border msp-border-gray-300 dark:msp-border-gray-700"
         )}
         style={getBackgroundStyle()}
         onClick={handleBackgroundClick}
       >
         {/* Video Background Layer */}
         {currentSlide?.backgroundType === 'video' && currentSlide.background && (
-          <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+          <div className="msp-absolute msp-inset-0 msp-z-0 msp-overflow-hidden msp-pointer-events-none">
             {currentSlide.background.includes('youtube') || currentSlide.background.includes('youtu.be') ? (
               <iframe
                 src={getEmbedUrl(currentSlide.background)}
-                className="w-full h-full object-cover scale-150" // Scale up to cover
+                className="msp-w-full msp-h-full msp-object-cover msp-scale-150" // Scale up to cover
                 style={{ pointerEvents: 'none' }}
                 frameBorder="0"
                 allow="autoplay; encrypted-media"
@@ -176,7 +200,7 @@ const Canvas = () => {
             ) : (
               <video
                 src={currentSlide.background}
-                className="w-full h-full object-cover"
+                className="msp-w-full msp-h-full msp-object-cover"
                 autoPlay
                 loop
                 muted
@@ -184,13 +208,13 @@ const Canvas = () => {
               />
             )}
             {/* Overlay to ensure text readability if needed, or just to prevent interaction */}
-            <div className="absolute inset-0 bg-transparent" />
+            <div className="msp-absolute msp-inset-0 msp-bg-transparent" />
           </div>
         )}
 
         {/* Elements Layer */}
-        <div className="absolute inset-0 z-10">
-          {currentSlide?.elements.map((element) => (
+        <div className="msp-absolute msp-inset-0 msp-z-10">
+          {currentSlide?.elements.filter(element => element.isVisible !== false).map((element) => (
             <DraggableElement
               key={element.id}
               element={element}
@@ -204,21 +228,21 @@ const Canvas = () => {
           <>
             <div
               className={cn(
-                "absolute left-3 top-1/2 -translate-y-1/2 z-40 bg-black/30 text-white rounded-full p-1.5 opacity-60",
-                isPlaying ? "cursor-pointer hover:opacity-90" : "pointer-events-none"
+                "msp-absolute msp-left-3 msp-top-1/2 -msp-translate-y-1/2 msp-z-40 msp-bg-black/30 msp-text-white msp-rounded-full msp-p-1.5 msp-opacity-60",
+                isPlaying ? "msp-cursor-pointer hover:msp-opacity-90" : "pointer-events-none"
               )}
               onClick={isPlaying ? goPrev : undefined}
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="msp-w-5 msp-h-5" />
             </div>
             <div
               className={cn(
-                "absolute right-3 top-1/2 -translate-y-1/2 z-40 bg-black/30 text-white rounded-full p-1.5 opacity-60",
-                isPlaying ? "cursor-pointer hover:opacity-90" : "pointer-events-none"
+                "msp-absolute msp-right-3 msp-top-1/2 -msp-translate-y-1/2 msp-z-40 msp-bg-black/30 msp-text-white msp-rounded-full msp-p-1.5 msp-opacity-60",
+                isPlaying ? "msp-cursor-pointer hover:msp-opacity-90" : "pointer-events-none"
               )}
               onClick={isPlaying ? goNext : undefined}
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="msp-w-5 msp-h-5" />
             </div>
           </>
         )}
@@ -226,7 +250,7 @@ const Canvas = () => {
         {/* Dots overlay */}
         {settings.showDots && (
           <div className={cn(
-            "absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 z-40",
+            "msp-absolute msp-bottom-3 msp-left-1/2 -msp-translate-x-1/2 msp-flex msp-gap-1.5 msp-z-40",
             isPlaying ? "" : "pointer-events-none"
           )}>
             {slides.map((_, idx) => (
@@ -234,9 +258,9 @@ const Canvas = () => {
                 key={idx}
                 onClick={isPlaying ? () => setCurrentSlide(idx) : undefined}
                 className={cn(
-                  "rounded-full transition-colors",
-                  idx === currentSlideIndex ? 'w-2.5 h-2.5 bg-white' : 'w-2 h-2 bg-white/50',
-                  isPlaying ? 'cursor-pointer hover:bg-white' : ''
+                  "msp-rounded-full msp-transition-colors",
+                  idx === currentSlideIndex ? 'msp-w-2.5 msp-h-2.5 msp-bg-white' : 'msp-w-2 msp-h-2 msp-bg-white/50',
+                  isPlaying ? 'msp-cursor-pointer hover:msp-bg-white' : ''
                 )}
               />
             ))}
@@ -245,7 +269,7 @@ const Canvas = () => {
 
         {/* Grid lines */}
         {!isPlaying && canvasSettings.showGrid && (
-          <div className="absolute inset-0 pointer-events-none opacity-10 z-20"
+          <div className="msp-absolute msp-inset-0 msp-pointer-events-none msp-opacity-10 msp-z-20"
             style={{
               backgroundImage: theme === 'dark'
                 ? 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)'
@@ -259,14 +283,14 @@ const Canvas = () => {
         {!isPlaying && canvasSettings.snapToElements && snapGuides.x.map((x, i) => (
           <div
             key={`sg-x-${i}`}
-            className="absolute top-0 bottom-0 pointer-events-none z-30"
+            className="msp-absolute msp-top-0 msp-bottom-0 msp-pointer-events-none msp-z-30"
             style={{ left: x, width: 1, backgroundColor: '#00d4ff', opacity: 0.85 }}
           />
         ))}
         {!isPlaying && canvasSettings.snapToElements && snapGuides.y.map((y, i) => (
           <div
             key={`sg-y-${i}`}
-            className="absolute left-0 right-0 pointer-events-none z-30"
+            className="msp-absolute msp-left-0 msp-right-0 msp-pointer-events-none msp-z-30"
             style={{ top: y, height: 1, backgroundColor: '#00d4ff', opacity: 0.85 }}
           />
         ))}

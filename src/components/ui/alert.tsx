@@ -4,12 +4,12 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const alertVariants = cva(
-  'relative w-full rounded-lg border p-4 [&>svg~*]:pl-7 [&>svg+div]:translate-y-[-3px] [&>svg]:absolute [&>svg]:left-4 [&>svg]:top-4 [&>svg]:text-foreground',
+  'msp-relative msp-w-full msp-rounded-lg msp-border msp-p-4 [&>svg~*]:msp-pl-7 [&>svg+div]:msp-translate-y-[-3px] [&>svg]:msp-absolute [&>svg]:msp-left-4 [&>svg]:msp-top-4 [&>svg]:msp-text-foreground',
   {
     variants: {
       variant: {
-        default: 'bg-background text-foreground',
-        destructive: 'border-destructive/50 text-destructive dark:border-destructive [&>svg]:text-destructive',
+        default: 'msp-bg-background msp-text-foreground',
+        destructive: 'msp-border-destructive/50 msp-text-destructive dark:msp-border-destructive [&>svg]:msp-text-destructive',
       },
     },
     defaultVariants: {
@@ -24,12 +24,12 @@ const Alert = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivEleme
 Alert.displayName = 'Alert';
 
 const AlertTitle = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLHeadingElement>>(({ className, ...props }, ref) => (
-  <h5 ref={ref} className={cn('mb-1 font-medium leading-none tracking-tight', className)} {...props} />
+  <h5 ref={ref} className={cn('msp-mb-1 msp-font-medium msp-leading-none msp-tracking-tight', className)} {...props} />
 ));
 AlertTitle.displayName = 'AlertTitle';
 
 const AlertDescription = React.forwardRef<HTMLParagraphElement, React.HTMLAttributes<HTMLParagraphElement>>(
-  ({ className, ...props }, ref) => <div ref={ref} className={cn('text-sm [&_p]:leading-relaxed', className)} {...props} />
+  ({ className, ...props }, ref) => <div ref={ref} className={cn('msp-text-sm [&_p]:msp-leading-relaxed', className)} {...props} />
 );
 AlertDescription.displayName = 'AlertDescription';
 

@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import dts from 'vite-plugin-dts';
-import path from 'path';
+import path from 'node:path';
 import react from '@vitejs/plugin-react-swc';
 
 // Library build — run with: vite build --config vite.lib.config.ts
@@ -8,15 +8,15 @@ export default defineConfig({
     plugins: [
         react(),
         dts({
+            tsconfigPath: './tsconfig.app.json',
             include: ['src'],
             exclude: [
                 'src/main.tsx',
                 'src/App.tsx',
                 'src/App.css',
                 'src/pages/**',
-                'src/vite-env.d.ts',
+                'src/lib.css',
             ],
-            rollupTypes: true,
             outDir: 'dist',
             insertTypesEntry: true,
         }),

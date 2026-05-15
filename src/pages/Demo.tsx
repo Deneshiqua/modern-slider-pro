@@ -23,14 +23,14 @@ const DemoPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-background text-foreground">
+        <div className="msp-min-h-screen msp-bg-background msp-text-foreground">
             {/* Nav */}
-            <header className="border-b sticky top-0 z-10 bg-background/80 backdrop-blur">
-                <div className="max-w-6xl mx-auto px-6 h-14 flex items-center justify-between">
-                    <Link to="/" className="font-bold text-lg tracking-tight">
+            <header className="msp-border-b msp-sticky msp-top-0 msp-z-10 msp-bg-background/80 msp-backdrop-blur">
+                <div className="msp-max-w-6xl msp-mx-auto msp-px-6 msp-h-14 msp-flex msp-items-center msp-justify-between">
+                    <Link to="/" className="msp-font-bold msp-text-lg msp-tracking-tight">
                         modern-slider-pro
                     </Link>
-                    <nav className="flex items-center gap-2">
+                    <nav className="msp-flex msp-items-center msp-gap-2">
                         <Button variant="ghost" size="sm" asChild>
                             <Link to="/demo">Demo</Link>
                         </Button>
@@ -39,7 +39,7 @@ const DemoPage = () => {
                         </Button>
                         <Button size="sm" asChild>
                             <Link to="/editor">
-                                Open Editor <ChevronRight className="ml-1 h-4 w-4" />
+                                Open Editor <ChevronRight className="msp-ml-1 msp-h-4 msp-w-4" />
                             </Link>
                         </Button>
                     </nav>
@@ -47,24 +47,24 @@ const DemoPage = () => {
             </header>
 
             {/* Hero */}
-            <section className="max-w-6xl mx-auto px-6 py-16">
-                <div className="text-center mb-10">
-                    <h1 className="text-4xl font-bold mb-3">Live Demo</h1>
-                    <p className="text-muted-foreground text-lg max-w-xl mx-auto">
+            <section className="msp-max-w-6xl msp-mx-auto msp-px-6 msp-py-16">
+                <div className="msp-text-center msp-mb-10">
+                    <h1 className="msp-text-4xl msp-font-bold msp-mb-3">Live Demo</h1>
+                    <p className="msp-text-muted-foreground msp-text-lg msp-max-w-xl msp-mx-auto">
                         This slider was built using the{' '}
-                        <code className="text-sm bg-muted px-1.5 py-0.5 rounded">SliderRunner</code> component
+                        <code className="msp-text-sm msp-bg-muted msp-px-1.5 msp-py-0.5 msp-rounded">SliderRunner</code> component
                         with sample slides defined in code.
                     </p>
                 </div>
 
                 {/* Controls */}
-                <div className="flex justify-center gap-3 mb-6">
+                <div className="msp-flex msp-justify-center msp-gap-3 msp-mb-6">
                     <Button
                         variant={autoPlay ? 'default' : 'outline'}
                         size="sm"
                         onClick={() => setAutoPlay(true)}
                     >
-                        <Play className="h-3.5 w-3.5 mr-1.5" />
+                        <Play className="msp-h-3.5 msp-w-3.5 msp-mr-1.5" />
                         Auto Play
                     </Button>
                     <Button
@@ -79,13 +79,13 @@ const DemoPage = () => {
                         size="sm"
                         onClick={() => setEditorOpen(true)}
                     >
-                        <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                        <Pencil className="msp-h-3.5 msp-w-3.5 msp-mr-1.5" />
                         Edit
                     </Button>
                 </div>
 
                 {/* Slider */}
-                <div className="rounded-xl overflow-hidden shadow-2xl border">
+                <div className="msp-rounded-xl msp-overflow-hidden msp-shadow-2xl msp-border">
                     <SliderRunner
                         slides={slides}
                         autoPlay={autoPlay}
@@ -96,79 +96,79 @@ const DemoPage = () => {
                 </div>
 
                 {/* JSON viewer */}
-                <div className="mt-8 rounded-xl border bg-muted/40 overflow-hidden">
-                    <div className="flex items-center justify-between px-4 py-2.5 border-b bg-muted/60">
-                        <div className="flex items-center gap-2 text-sm font-medium">
-                            <Code2 className="h-4 w-4 text-primary" />
+                <div className="msp-mt-8 msp-rounded-xl msp-border msp-bg-muted/40 msp-overflow-hidden">
+                    <div className="msp-flex msp-items-center msp-justify-between msp-px-4 msp-py-2.5 msp-border-b msp-bg-muted/60">
+                        <div className="msp-flex msp-items-center msp-gap-2 msp-text-sm msp-font-medium">
+                            <Code2 className="msp-h-4 msp-w-4 msp-text-primary" />
                             Slide {activeSlide + 1} — JSON
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="msp-flex msp-items-center msp-gap-2">
                             {slides.map((_, i) => (
                                 <button
                                     key={i}
                                     onClick={() => setActiveSlide(i)}
-                                    className={`h-2 w-2 rounded-full transition-colors ${i === activeSlide ? 'bg-primary' : 'bg-muted-foreground/30'
+                                    className={`msp-h-2 msp-w-2 msp-rounded-full msp-transition-colors ${i === activeSlide ? 'bg-primary' : 'bg-muted-foreground/30'
                                         }`}
                                 />
                             ))}
                             <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 px-2 text-xs ml-2"
+                                className="msp-h-7 msp-px-2 msp-text-xs msp-ml-2"
                                 onClick={handleCopy}
                             >
                                 {copied ? (
-                                    <><Check className="h-3.5 w-3.5 mr-1 text-green-500" /> Copied</>
+                                    <><Check className="msp-h-3.5 msp-w-3.5 msp-mr-1 msp-text-green-500" /> Copied</>
                                 ) : (
-                                    <><Copy className="h-3.5 w-3.5 mr-1" /> Copy</>
+                                    <><Copy className="msp-h-3.5 msp-w-3.5 msp-mr-1" /> Copy</>
                                 )}
                             </Button>
                         </div>
                     </div>
-                    <pre className="p-4 text-xs font-mono overflow-x-auto max-h-80 text-muted-foreground leading-relaxed">
+                    <pre className="msp-p-4 msp-text-xs msp-font-mono msp-overflow-x-auto msp-max-h-80 msp-text-muted-foreground msp-leading-relaxed">
                         {JSON.stringify(slides[activeSlide], null, 2)}
                     </pre>
                 </div>
             </section>
 
             {/* Features */}
-            <section className="border-t bg-muted/30">
-                <div className="max-w-6xl mx-auto px-6 py-16 grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <div className="space-y-2">
-                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <Layers className="h-5 w-5 text-primary" />
+            <section className="msp-border-t msp-bg-muted/30">
+                <div className="msp-max-w-6xl msp-mx-auto msp-px-6 msp-py-16 msp-grid msp-grid-cols-1 md:msp-grid-cols-3 msp-gap-8">
+                    <div className="msp-space-y-2">
+                        <div className="msp-h-9 msp-w-9 msp-rounded-lg msp-bg-primary/10 msp-flex msp-items-center msp-justify-center">
+                            <Layers className="msp-h-5 msp-w-5 msp-text-primary" />
                         </div>
-                        <h3 className="font-semibold">Visual Editor</h3>
-                        <p className="text-sm text-muted-foreground">
+                        <h3 className="msp-font-semibold">Visual Editor</h3>
+                        <p className="msp-text-sm msp-text-muted-foreground">
                             Drag-and-drop canvas with text, image, button, and box elements. Full style controls per element.
                         </p>
                     </div>
-                    <div className="space-y-2">
-                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <Play className="h-5 w-5 text-primary" />
+                    <div className="msp-space-y-2">
+                        <div className="msp-h-9 msp-w-9 msp-rounded-lg msp-bg-primary/10 msp-flex msp-items-center msp-justify-center">
+                            <Play className="msp-h-5 msp-w-5 msp-text-primary" />
                         </div>
-                        <h3 className="font-semibold">Frame-perfect Animations</h3>
-                        <p className="text-sm text-muted-foreground">
+                        <h3 className="msp-font-semibold">Frame-perfect Animations</h3>
+                        <p className="msp-text-sm msp-text-muted-foreground">
                             Every element has its own entrance animation, powered by Framer Motion presets.
                         </p>
                     </div>
-                    <div className="space-y-2">
-                        <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center">
-                            <Code2 className="h-5 w-5 text-primary" />
+                    <div className="msp-space-y-2">
+                        <div className="msp-h-9 msp-w-9 msp-rounded-lg msp-bg-primary/10 msp-flex msp-items-center msp-justify-center">
+                            <Code2 className="msp-h-5 msp-w-5 msp-text-primary" />
                         </div>
-                        <h3 className="font-semibold">Developer Friendly</h3>
-                        <p className="text-sm text-muted-foreground">
+                        <h3 className="msp-font-semibold">Developer Friendly</h3>
+                        <p className="msp-text-sm msp-text-muted-foreground">
                             Export your slides as JSON, embed with{' '}
-                            <code className="text-xs bg-muted px-1 rounded">{'<SliderRunner />'}</code> — zero config.
+                            <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">{'<SliderRunner />'}</code> — zero config.
                         </p>
                     </div>
                 </div>
             </section>
 
             {/* CTA */}
-            <section className="max-w-6xl mx-auto px-6 py-16 text-center">
-                <h2 className="text-2xl font-bold mb-4">Ready to build your slider?</h2>
-                <div className="flex justify-center gap-3">
+            <section className="msp-max-w-6xl msp-mx-auto msp-px-6 msp-py-16 msp-text-center">
+                <h2 className="msp-text-2xl msp-font-bold msp-mb-4">Ready to build your slider?</h2>
+                <div className="msp-flex msp-justify-center msp-gap-3">
                     <Button asChild>
                         <Link to="/editor">Open Editor</Link>
                     </Button>
@@ -180,9 +180,9 @@ const DemoPage = () => {
 
             {/* Editor Modal */}
             <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
-                <DialogContent className="max-w-[98vw] w-[98vw] h-[95vh] p-0 overflow-hidden [&>button]:hidden">
-                    <DialogTitle className="sr-only">Slider Editor</DialogTitle>
-                    <div className="h-full w-full">
+                <DialogContent className="msp-max-w-[98vw] msp-w-[98vw] msp-h-[95vh] msp-p-0 msp-overflow-hidden [&>button]:msp-hidden">
+                    <DialogTitle className="msp-sr-only">Slider Editor</DialogTitle>
+                    <div className="msp-h-full msp-w-full">
                         <EditorLayout onDemoSave={() => setEditorOpen(false)} />
                     </div>
                 </DialogContent>

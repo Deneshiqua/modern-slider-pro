@@ -3,7 +3,7 @@ import EditorLayout from '@/components/editor/EditorLayout';
 
 const EditorPage = () => {
     return (
-        <div className="h-screen w-full overflow-hidden">
+        <div className="msp-h-screen msp-w-full msp-overflow-hidden">
             <EditorLayout />
         </div>
     );

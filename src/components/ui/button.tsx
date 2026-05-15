@@ -5,22 +5,22 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0',
+  'msp-inline-flex msp-items-center msp-justify-center msp-gap-2 msp-whitespace-nowrap msp-rounded-md msp-text-sm msp-font-medium msp-ring-offset-background msp-transition-colors focus-visible:msp-outline-none focus-visible:msp-ring-2 focus-visible:msp-ring-ring focus-visible:msp-ring-offset-2 disabled:msp-pointer-events-none disabled:msp-opacity-50 [&_svg]:msp-pointer-events-none [&_svg]:msp-size-4 [&_svg]:msp-shrink-0',
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
-        destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-        outline: 'border border-input hover:bg-accent hover:text-accent-foreground',
-        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        ghost: 'hover:bg-accent hover:text-accent-foreground',
-        link: 'text-primary underline-offset-4 hover:underline',
+        default: 'msp-bg-primary msp-text-primary-foreground hover:msp-bg-primary/90',
+        destructive: 'msp-bg-destructive msp-text-destructive-foreground hover:msp-bg-destructive/90',
+        outline: 'msp-border msp-border-input hover:msp-bg-accent hover:msp-text-accent-foreground',
+        secondary: 'msp-bg-secondary msp-text-secondary-foreground hover:msp-bg-secondary/80',
+        ghost: 'hover:msp-bg-accent hover:msp-text-accent-foreground',
+        link: 'msp-text-primary msp-underline-offset-4 hover:msp-underline',
       },
       size: {
-        default: 'h-10 px-4 py-2',
-        sm: 'h-9 rounded-md px-3',
-        lg: 'h-11 rounded-md px-8',
-        icon: 'h-10 w-10',
+        default: 'msp-h-10 msp-px-4 msp-py-2',
+        sm: 'msp-h-9 msp-rounded-md msp-px-3',
+        lg: 'msp-h-11 msp-rounded-md msp-px-8',
+        icon: 'msp-h-10 msp-w-10',
       },
     },
     defaultVariants: {
