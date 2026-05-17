@@ -37,6 +37,11 @@ export const getEditorViewportSize = (
   return VIEWPORT_SIZE[viewMode];
 };
 
+export const CANVAS_ZOOM_MIN = 0.25;
+export const CANVAS_ZOOM_MAX = 3;
+export const CANVAS_ZOOM_STEP = 0.1;
+export const CANVAS_ZOOM_DEFAULT = 1;
+
 export const DEFAULT_CANVAS_SETTINGS: CanvasSettings = {
   gridSize: 50,
   showGrid: true,

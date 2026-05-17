@@ -180,9 +180,9 @@ const DemoPage = () => {
 
             {/* Editor Modal */}
             <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
-                <DialogContent className="msp-max-w-[98vw] msp-w-[98vw] msp-h-[95vh] msp-p-0 msp-overflow-hidden [&>button]:msp-hidden">
+                <DialogContent className="!msp-flex msp-flex-col msp-max-w-[98vw] msp-w-[98vw] msp-h-[95vh] msp-max-h-[95vh] msp-p-0 msp-overflow-hidden [&>button]:msp-hidden">
                     <DialogTitle className="msp-sr-only">Slider Editor</DialogTitle>
-                    <div className="msp-h-full msp-w-full">
+                    <div className="msp-flex-1 msp-min-h-0 msp-w-full msp-overflow-hidden">
                         <EditorLayout onDemoSave={() => setEditorOpen(false)} />
                     </div>
                 </DialogContent>

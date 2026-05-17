@@ -135,3 +135,12 @@ export function getSlideSpaceOuterRect(element: EditorElement, viewMode: ViewMod
   const local = localOuterBounds(element, viewMode);
   return offsetBounds(local, r.x, r.y);
 }
+
+/** Width and height of an element's axis-aligned bounding box (parent-local, rotation included). */
+export function getElementOuterSize(element: EditorElement, viewMode: ViewMode): { width: number; height: number } {
+  const rect = localOuterBounds(element, viewMode);
+  return {
+    width: Math.max(0, rect.maxX - rect.minX),
+    height: Math.max(0, rect.maxY - rect.minY),
+  };
+}

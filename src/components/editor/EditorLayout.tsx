@@ -89,35 +89,42 @@ const EditorShell = ({
   return (
     <div
       className={cn(
-        'msp-slider-pro msp-flex msp-flex-col msp-h-full msp-w-full msp-bg-background msp-text-foreground',
+        'msp-slider-pro msp-flex msp-flex-col msp-h-full msp-w-full msp-min-h-0 msp-overflow-hidden msp-bg-background msp-text-foreground',
         theme === 'dark' ? 'msp-dark dark' : 'msp-light',
         className,
       )}
     >
       {showToaster && <Toaster theme={theme} />}
       <Toolbar onDemoSave={onDemoSave} onSave={onSave} saveButtonLabel={saveButtonLabel} />
-      <div className="msp-flex msp-flex-1 msp-overflow-hidden">
+      <div className="msp-flex msp-flex-1 msp-min-h-0 msp-min-w-0 msp-overflow-hidden">
         <Sidebar />
-        <Canvas />
+        <ResizablePanelGroup direction="horizontal" className="msp-flex-1 msp-min-h-0 msp-min-w-0">
+          <ResizablePanel defaultSize={75} minSize={45} className="msp-min-h-0 msp-min-w-0">
+            <Canvas />
+          </ResizablePanel>
 
-        {/* Right Sidebar with Resizable Panels */}
-        <div className="msp-w-80 msp-border-l msp-bg-card msp-flex msp-flex-col">
-          <ResizablePanelGroup direction="vertical">
+          <ResizableHandle withHandle className="msp-w-1.5 msp-bg-border hover:msp-bg-primary/20 msp-transition-colors" />
 
-            {/* Layer Panel (Top) */}
-            <ResizablePanel defaultSize={35} minSize={10}>
-              <LayerPanel />
-            </ResizablePanel>
+          <ResizablePanel
+            defaultSize={25}
+            minSize={18}
+            maxSize={50}
+            className="msp-min-h-0 msp-min-w-0 msp-border-l msp-bg-card"
+          >
+            <ResizablePanelGroup direction="vertical" className="msp-h-full">
 
-            <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={35} minSize={10}>
+                <LayerPanel />
+              </ResizablePanel>
 
-            {/* Properties Panel (Bottom) */}
-            <ResizablePanel defaultSize={65} minSize={20}>
-              <PropertiesPanel />
-            </ResizablePanel>
+              <ResizableHandle withHandle />
 
-          </ResizablePanelGroup>
-        </div>
+              <ResizablePanel defaultSize={65} minSize={20}>
+                <PropertiesPanel />
+              </ResizablePanel>
+            </ResizablePanelGroup>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </div>
     </div>
   );

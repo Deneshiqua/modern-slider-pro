@@ -16,6 +16,7 @@ import { EditorElement, ResponsivePropertyMode } from '@/types/editor';
 import { getElementPropertiesForMode } from '@/lib/responsive';
 import { useEditor } from '@/context/EditorContext';
 import { useLanguage } from '@/context/LanguageContext';
+import AlignmentControls from './AlignmentControls';
 
 const PropertiesPanel = () => {
   const {
@@ -355,6 +356,8 @@ const PropertiesPanel = () => {
           <AccordionItem value="content">
             <AccordionTrigger className="msp-px-3 msp-py-2 msp-text-xs hover:msp-no-underline hover:msp-bg-muted/50">{t('editor.properties.content')}</AccordionTrigger>
             <AccordionContent className="msp-px-3 msp-py-2 msp-space-y-3">
+              <AlignmentControls elementId={activeElement.id} propertyMode={propertyMode} />
+
               <div className="msp-space-y-1">
                 <Label className="msp-text-xs">{t('editor.properties.content')}</Label>
                 <Input

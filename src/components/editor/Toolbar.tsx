@@ -89,6 +89,9 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
     : null;
   const canGroup = selectedElementIds.length > 1;
   const canUngroup = selectedRootElement?.type === 'box' && Boolean(selectedRootElement.children?.length);
+  const showPublishButton = Boolean(onDemoSave || onSave);
+  const resolvedSaveLabel = saveButtonLabel ?? t('editor.toolbar.save');
+  const resolvedSaveTooltip = t('editor.toolbar.save');
 
   const createSavePayload = (): SliderEditorSavePayload => ({
     version: 1,
@@ -149,7 +152,7 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
   };
 
   return (
-    <div className="msp-h-14 msp-border-b msp-bg-card msp-flex msp-items-center msp-justify-between msp-px-4 msp-shrink-0">
+    <div className="msp-h-14 msp-border-b msp-bg-card msp-flex msp-items-center msp-justify-between msp-px-4 msp-shrink-0 msp-min-w-0">
       <div className="msp-flex msp-items-center msp-gap-2">
         <h1 className="msp-font-bold msp-text-lg msp-mr-4">{t('editor.toolbar.title')}</h1>
 
@@ -607,34 +610,36 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
 
         <Button
           variant={isPlaying ? "destructive" : "default"}
+          size="sm"
           onClick={togglePlay}
-          className="msp-w-32"
         >
           {isPlaying ? (
             <>
-              <Square className="msp-h-4 msp-w-4 msp-mr-2" /> {t('editor.toolbar.stop')}
+              <Square className="msp-h-3.5 msp-w-3.5 msp-mr-1.5" /> {t('editor.toolbar.stop')}
             </>
           ) : (
             <>
-              <Play className="msp-h-4 msp-w-4 msp-mr-2" /> {t('editor.toolbar.preview')}
+              <Play className="msp-h-3.5 msp-w-3.5 msp-mr-1.5" /> {t('editor.toolbar.preview')}
             </>
           )}
         </Button>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={handlePublish}
-              >
-                <Upload className="msp-h-4 msp-w-4 msp-mr-2" /> {saveButtonLabel ?? t('editor.toolbar.publishDemo')}
-                {isDirty ? ' *' : ''}
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>{t('editor.toolbar.publishDemoTooltip')}</TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        {showPublishButton && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={handlePublish}
+                >
+                  <Upload className="msp-h-4 msp-w-4 msp-mr-2" /> {resolvedSaveLabel}
+                  {isDirty ? ' *' : ''}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{resolvedSaveTooltip}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
       </div>
     </div>
   );

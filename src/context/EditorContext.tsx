@@ -1,7 +1,14 @@
 import { CanvasSettings, EditorElement, EditorState, ElementType, ResponsivePropertyMode, Slide, SliderSettings, ViewMode } from '@/types/editor';
 import React, { ReactNode, createContext, useContext, useMemo, useState } from 'react';
 
-import { DEFAULT_CANVAS_SETTINGS, DEFAULT_SLIDER_SETTINGS } from '@/lib/constants';
+import {
+  CANVAS_ZOOM_DEFAULT,
+  CANVAS_ZOOM_MAX,
+  CANVAS_ZOOM_MIN,
+  CANVAS_ZOOM_STEP,
+  DEFAULT_CANVAS_SETTINGS,
+  DEFAULT_SLIDER_SETTINGS,
+} from '@/lib/constants';
 import { DEMO_SLIDES } from '@/lib/demoSlides';
 import { getSlideSpaceOuterRect } from '@/lib/groupBounds';
 import { mergeResponsiveElementUpdates, resolveElementProperties } from '@/lib/responsive';
@@ -50,6 +57,11 @@ interface EditorContextType extends EditorState {
   updateCanvasSettings: (settings: Partial<CanvasSettings>) => void;
   snapGuides: { x: number[]; y: number[] };
   setSnapGuides: (guides: { x: number[]; y: number[] }) => void;
+  canvasZoom: number;
+  setCanvasZoom: (zoom: number) => void;
+  zoomCanvasIn: () => void;
+  zoomCanvasOut: () => void;
+  resetCanvasZoom: () => void;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -94,6 +106,26 @@ export const EditorProvider = ({
   const [showBorders, setShowBorders] = useState(false);
   const [canvasSettings, setCanvasSettings] = useState<CanvasSettings>(initialCanvasSettings);
   const [snapGuides, setSnapGuides] = useState<{ x: number[]; y: number[] }>({ x: [], y: [] });
+  const [canvasZoom, setCanvasZoomState] = useState(CANVAS_ZOOM_DEFAULT);
+
+  const clampCanvasZoom = (zoom: number) =>
+    Math.min(CANVAS_ZOOM_MAX, Math.max(CANVAS_ZOOM_MIN, Math.round(zoom * 100) / 100));
+
+  const setCanvasZoom = (zoom: number) => {
+    setCanvasZoomState(clampCanvasZoom(zoom));
+  };
+
+  const zoomCanvasIn = () => {
+    setCanvasZoomState((current) => clampCanvasZoom(current + CANVAS_ZOOM_STEP));
+  };
+
+  const zoomCanvasOut = () => {
+    setCanvasZoomState((current) => clampCanvasZoom(current - CANVAS_ZOOM_STEP));
+  };
+
+  const resetCanvasZoom = () => {
+    setCanvasZoomState(CANVAS_ZOOM_DEFAULT);
+  };
   const [isDirty, setIsDirty] = useState(false);
   const [pastSnapshots, setPastSnapshots] = useState<EditorSnapshot[]>([]);
   const [futureSnapshots, setFutureSnapshots] = useState<EditorSnapshot[]>([]);
@@ -674,6 +706,11 @@ export const EditorProvider = ({
     updateCanvasSettings,
     snapGuides,
     setSnapGuides,
+    canvasZoom,
+    setCanvasZoom,
+    zoomCanvasIn,
+    zoomCanvasOut,
+    resetCanvasZoom,
   }), [
     slides,
     settings,
@@ -686,6 +723,7 @@ export const EditorProvider = ({
     showBorders,
     canvasSettings,
     snapGuides,
+    canvasZoom,
     isDirty,
     pastSnapshots,
     futureSnapshots,
@@ -751,6 +789,11 @@ export const useEditor = () => {
       loadSlides: () => { },
       updateCanvasSettings: () => { },
       setSnapGuides: () => { },
+      canvasZoom: CANVAS_ZOOM_DEFAULT,
+      setCanvasZoom: () => { },
+      zoomCanvasIn: () => { },
+      zoomCanvasOut: () => { },
+      resetCanvasZoom: () => { },
     } as EditorContextType;
   }
   return context;
