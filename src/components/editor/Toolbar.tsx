@@ -5,11 +5,10 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
-import { Grid, Group, LayoutGrid, Monitor, Play, Plus, Redo2, Save, Settings, SlidersHorizontal, Smartphone, Square, Tablet, Terminal, Undo2, Ungroup, Upload } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Group, LayoutGrid, Monitor, Play, Plus, Redo2, Save, Settings, SlidersHorizontal, Smartphone, Square, Tablet, Terminal, Undo2, Ungroup, Upload } from 'lucide-react';
 import React, { useState } from 'react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
@@ -43,6 +42,19 @@ const isSliderProject = (value: unknown): value is SliderProject => {
 
   return project.version === 1 && Array.isArray(project.slides);
 };
+
+/** Fixed canvas presets (width × height). Labels are derived as `WxHpx`. */
+const CANVAS_SIZE_PRESETS = [
+  { w: 1280, h: 720 },
+  { w: 1024, h: 768 },
+  { w: 800, h: 800 },
+  { w: 720, h: 1280 },
+] as const;
+
+const LANGUAGE_OPTIONS = [
+  { code: 'en' as const, label: 'English' },
+  { code: 'tr' as const, label: 'Türkçe' },
+];
 
 const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
   const {
@@ -84,6 +96,14 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
   const [isCanvasSettingsOpen, setIsCanvasSettingsOpen] = useState(false);
   const GRID_PRESETS = [10, 20, 25, 50, 100];
   const [showCustomGrid, setShowCustomGrid] = useState(false);
+  /** User chose "Özel" so width/height fields are shown; cleared when picking a preset. */
+  const [explicitCanvasCustomSize, setExplicitCanvasCustomSize] = useState(false);
+
+  const canvasSizePresetHit = CANVAS_SIZE_PRESETS.find(
+    preset => preset.w === canvasSettings.canvasWidth && preset.h === canvasSettings.canvasHeight,
+  );
+  const showCanvasDimensionInputs =
+    explicitCanvasCustomSize || canvasSizePresetHit === undefined;
   const selectedRootElement = selectedElementId
     ? slides[currentSlideIndex]?.elements.find(element => element.id === selectedElementId)
     : null;
@@ -267,95 +287,118 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
       </div>
 
       <div className="msp-flex msp-items-center msp-gap-2">
-        <div className="msp-flex msp-items-center msp-gap-2 msp-mr-2">
+        {/* Canvas settings (popover avoids modal overlay/focus trap for embedders) */}
+        <Popover modal={false} open={isCanvasSettingsOpen} onOpenChange={setIsCanvasSettingsOpen}>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <div className="msp-flex msp-items-center msp-gap-2">
-                  <Switch
-                    id="show-borders"
-                    checked={showBorders}
-                    onCheckedChange={setShowBorders}
-                  />
-                  <Label htmlFor="show-borders" className="msp-cursor-pointer">
-                    <Grid className="msp-h-4 msp-w-4" />
-                  </Label>
-                </div>
-              </TooltipTrigger>
-              <TooltipContent>{t('editor.toolbar.showBorders')}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-
-        {/* Canvas Settings Dialog */}
-        <Dialog open={isCanvasSettingsOpen} onOpenChange={setIsCanvasSettingsOpen}>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={() => setIsCanvasSettingsOpen(true)}>
-                  <LayoutGrid className="msp-h-5 msp-w-5" />
-                </Button>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <LayoutGrid className="msp-h-5 msp-w-5" />
+                  </Button>
+                </PopoverTrigger>
               </TooltipTrigger>
               <TooltipContent>Canvas Ayarları</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <DialogContent className="msp-max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Canvas Ayarları</DialogTitle>
-              <DialogDescription>Canvas boyutu, grid ve hizalama çizgisi ayarlarını yapın.</DialogDescription>
-            </DialogHeader>
-            <div className="msp-space-y-5 msp-py-2">
+          <PopoverContent align="end" className="msp-max-w-sm msp-w-[min(calc(100vw-2rem),24rem)] msp-max-h-[min(32rem,calc(100vh-5rem))] msp-overflow-y-auto msp-p-4">
+            <div className="msp-space-y-1.5 msp-border-b msp-pb-3 msp-mb-1">
+              <h2 className="msp-text-base msp-font-semibold msp-leading-none">Canvas Ayarları</h2>
+              <p className="msp-text-sm msp-text-muted-foreground">
+                Canvas boyutu, kenarlıklar, grid ve hizalama çizgisi ayarlarını yapın.
+              </p>
+            </div>
+            <div className="msp-space-y-5 msp-pt-3">
               {/* Canvas Size */}
               <div className="msp-space-y-2">
                 <Label>Canvas Boyutu</Label>
-                <div className="msp-grid msp-grid-cols-2 msp-gap-2">
-                  <div className="msp-space-y-1">
-                    <Label className="msp-text-xs msp-text-muted-foreground">Genişlik (px)</Label>
-                    <Input
-                      type="number"
-                      className="msp-h-7 msp-text-xs"
-                      value={canvasSettings.canvasWidth}
-                      min={100}
-                      max={3840}
-                      onChange={(e) => {
-                        const val = Number.parseInt(e.target.value);
-                        if (!Number.isNaN(val) && val >= 100) updateCanvasSettings({ canvasWidth: val });
-                      }}
-                    />
-                  </div>
-                  <div className="msp-space-y-1">
-                    <Label className="msp-text-xs msp-text-muted-foreground">Yükseklik (px)</Label>
-                    <Input
-                      type="number"
-                      className="msp-h-7 msp-text-xs"
-                      value={canvasSettings.canvasHeight}
-                      min={100}
-                      max={2160}
-                      onChange={(e) => {
-                        const val = Number.parseInt(e.target.value);
-                        if (!Number.isNaN(val) && val >= 100) updateCanvasSettings({ canvasHeight: val });
-                      }}
-                    />
-                  </div>
+                <div className="msp-flex msp-gap-1.5 msp-flex-wrap">
+                  {CANVAS_SIZE_PRESETS.map(({ w, h }) => {
+                    const label = `${w}×${h}px`;
+                    const isHit = canvasSizePresetHit?.w === w && canvasSizePresetHit?.h === h;
+                    const selected = Boolean(isHit && !explicitCanvasCustomSize);
+
+                    return (
+                      <Button
+                        key={`${w}x${h}`}
+                        variant={selected ? 'default' : 'outline'}
+                        size="sm"
+                        className="msp-h-7 msp-text-xs msp-px-2.5"
+                        onClick={() => {
+                          updateCanvasSettings({ canvasWidth: w, canvasHeight: h });
+                          setExplicitCanvasCustomSize(false);
+                        }}
+                      >
+                        {label}
+                      </Button>
+                    );
+                  })}
+                  <Button
+                    variant={explicitCanvasCustomSize || !canvasSizePresetHit ? 'default' : 'outline'}
+                    size="sm"
+                    className="msp-h-7 msp-text-xs msp-px-2.5"
+                    onClick={() => setExplicitCanvasCustomSize(true)}
+                  >
+                    Özel
+                  </Button>
                 </div>
-                <div className="msp-flex msp-gap-1.5 msp-flex-wrap msp-pt-1">
-                  {[
-                    { label: '16:9', w: 1280, h: 720 },
-                    { label: '4:3', w: 1024, h: 768 },
-                    { label: '1:1', w: 800, h: 800 },
-                    { label: '9:16', w: 720, h: 1280 },
-                  ].map(({ label, w, h }) => (
-                    <Button
-                      key={label}
-                      variant={canvasSettings.canvasWidth === w && canvasSettings.canvasHeight === h ? 'default' : 'outline'}
-                      size="sm"
-                      className="msp-h-7 msp-text-xs msp-px-2.5"
-                      onClick={() => updateCanvasSettings({ canvasWidth: w, canvasHeight: h })}
-                    >
-                      {label}
-                    </Button>
-                  ))}
+                {showCanvasDimensionInputs && (
+                  <div className="msp-grid msp-grid-cols-2 msp-gap-2 msp-pt-1">
+                    <div className="msp-space-y-1">
+                      <Label className="msp-text-xs msp-text-muted-foreground">Genişlik (px)</Label>
+                      <Input
+                        type="number"
+                        className="msp-h-7 msp-text-xs"
+                        value={canvasSettings.canvasWidth}
+                        min={100}
+                        max={3840}
+                        onChange={(e) => {
+                          const val = Number.parseInt(e.target.value);
+                          if (!Number.isNaN(val) && val >= 100) updateCanvasSettings({ canvasWidth: val });
+                        }}
+                      />
+                    </div>
+                    <div className="msp-space-y-1">
+                      <Label className="msp-text-xs msp-text-muted-foreground">Yükseklik (px)</Label>
+                      <Input
+                        type="number"
+                        className="msp-h-7 msp-text-xs"
+                        value={canvasSettings.canvasHeight}
+                        min={100}
+                        max={2160}
+                        onChange={(e) => {
+                          const val = Number.parseInt(e.target.value);
+                          if (!Number.isNaN(val) && val >= 100) updateCanvasSettings({ canvasHeight: val });
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="msp-border-t" />
+
+              <div className="msp-flex msp-items-center msp-justify-between">
+                <Label htmlFor="tb-show-borders">{t('editor.toolbar.showBorders')}</Label>
+                <Switch
+                  id="tb-show-borders"
+                  checked={showBorders}
+                  onCheckedChange={setShowBorders}
+                />
+              </div>
+
+              <div className="msp-border-t" />
+
+              <div className="msp-flex msp-items-center msp-justify-between">
+                <div>
+                  <Label htmlFor="tb-show-rulers">{t('editor.toolbar.showRulers')}</Label>
+                  <p className="msp-text-xs msp-text-muted-foreground msp-mt-0.5">{t('editor.toolbar.showRulersHint')}</p>
                 </div>
+                <Switch
+                  id="tb-show-rulers"
+                  checked={canvasSettings.showRulers}
+                  onCheckedChange={(checked) => updateCanvasSettings({ showRulers: checked })}
+                />
               </div>
 
               <div className="msp-border-t" />
@@ -429,27 +472,28 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
                 />
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
+          </PopoverContent>
+        </Popover>
 
-        {/* Slider Settings Dialog */}
-        <Dialog open={isSliderSettingsOpen} onOpenChange={setIsSliderSettingsOpen}>
+        <Popover modal={false} open={isSliderSettingsOpen} onOpenChange={setIsSliderSettingsOpen}>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" onClick={() => setIsSliderSettingsOpen(true)}>
-                  <SlidersHorizontal className="msp-h-5 msp-w-5" />
-                </Button>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon">
+                    <SlidersHorizontal className="msp-h-5 msp-w-5" />
+                  </Button>
+                </PopoverTrigger>
               </TooltipTrigger>
               <TooltipContent>Slider Ayarları</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <DialogContent className="msp-max-w-sm">
-            <DialogHeader>
-              <DialogTitle>Slider Ayarları</DialogTitle>
-              <DialogDescription>Slider'in genel davranışını buradan ayarlayın.</DialogDescription>
-            </DialogHeader>
-            <div className="msp-space-y-5 msp-py-2">
+          <PopoverContent align="end" className="msp-max-w-sm msp-w-[min(calc(100vw-2rem),24rem)] msp-max-h-[min(28rem,calc(100vh-5rem))] msp-overflow-y-auto msp-p-4">
+            <div className="msp-space-y-1.5 msp-border-b msp-pb-3 msp-mb-1">
+              <h2 className="msp-text-base msp-font-semibold msp-leading-none">Slider Ayarları</h2>
+              <p className="msp-text-sm msp-text-muted-foreground">Slider'in genel davranışını buradan ayarlayın.</p>
+            </div>
+            <div className="msp-space-y-5 msp-pt-3">
               <div className="msp-flex msp-items-center msp-justify-between">
                 <Label htmlFor="tb-autoPlay">{t('editor.properties.autoPlay')}</Label>
                 <Switch
@@ -499,27 +543,27 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
                 />
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
+          </PopoverContent>
+        </Popover>
 
-        <Dialog>
+        <Popover modal={false}>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <DialogTrigger asChild>
+                <PopoverTrigger asChild>
                   <Button variant="ghost" size="icon">
                     <Settings className="msp-h-5 msp-w-5" />
                   </Button>
-                </DialogTrigger>
+                </PopoverTrigger>
               </TooltipTrigger>
               <TooltipContent>{t('settings.title')}</TooltipContent>
             </Tooltip>
           </TooltipProvider>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{t('settings.title')}</DialogTitle>
-            </DialogHeader>
-            <div className="msp-space-y-4 msp-py-4">
+          <PopoverContent align="end" className="msp-max-w-sm msp-w-[min(calc(100vw-2rem),20rem)] msp-p-4">
+            <div className="msp-space-y-1.5 msp-border-b msp-pb-3 msp-mb-1">
+              <h2 className="msp-text-base msp-font-semibold msp-leading-none">{t('settings.title')}</h2>
+            </div>
+            <div className="msp-space-y-4 msp-pt-3">
               <div className="msp-flex msp-items-center msp-justify-between">
                 <Label>{t('settings.theme')}</Label>
                 <div className="msp-flex msp-items-center msp-gap-2">
@@ -527,21 +571,23 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
                   <Switch checked={theme === 'dark'} onCheckedChange={toggleTheme} />
                 </div>
               </div>
-              <div className="msp-space-y-2">
-                <Label>{t('settings.language')}</Label>
-                <Select value={language} onValueChange={(val: 'en' | 'tr') => setLanguage(val)}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="en">English</SelectItem>
-                    <SelectItem value="tr">Türkçe</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="msp-flex msp-gap-1.5">
+                {LANGUAGE_OPTIONS.map(({ code, label }) => (
+                  <Button
+                    key={code}
+                    type="button"
+                    variant={language === code ? 'default' : 'outline'}
+                    size="sm"
+                    className="msp-h-7 msp-flex-1 msp-text-xs"
+                    onClick={() => setLanguage(code)}
+                  >
+                    {label}
+                  </Button>
+                ))}
               </div>
             </div>
-          </DialogContent>
-        </Dialog>
+          </PopoverContent>
+        </Popover>
 
         {/* Save Button & Dialog */}
         <Dialog open={isSaveOpen} onOpenChange={setIsSaveOpen}>

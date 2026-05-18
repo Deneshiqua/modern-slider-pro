@@ -7,6 +7,8 @@ import { Rnd } from 'react-rnd';
 import { getEditorViewportSize } from '@/lib/constants';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
+import { elementSubtreeContainsSlide } from '@/lib/elementSubtree';
+import { formatElementHoverStyleTag } from '@/lib/elementHoverCss';
 import { resolveElementProperties } from '@/lib/responsive';
 import { useEditor } from '@/context/EditorContext';
 
@@ -18,6 +20,17 @@ interface DraggableElementProps {
 }
 
 const SNAP_THRESHOLD = 6;
+
+function findElementInTree(elements: EditorElement[], id: string): EditorElement | null {
+  for (const el of elements) {
+    if (el.id === id) return el;
+    if (el.children?.length) {
+      const found = findElementInTree(el.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
 
 const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = false }: DraggableElementProps) => {
   const {
@@ -32,7 +45,10 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
     viewMode,
     propertyMode,
     canvasSettings,
+    canvasZoom,
     setSnapGuides,
+    enterLayersDrill,
+    layersDrillParentId,
   } = useEditor();
   const renderedElement = resolveElementProperties(element, viewMode);
   const isSelected = selectedElementIds.includes(element.id);
@@ -42,9 +58,29 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
   selectedElementIdsRef.current = selectedElementIds;
   const isLocked = element.isLocked === true;
 
+  const slideRoots = slides[currentSlideIndex]?.elements ?? [];
+  /** Katmanlar'da grubun içine drill edildiğinde statik/group kilidini kaldırır (nested Rnd + pointer events). */
+  const insideLayersDrillSubtree =
+    layersDrillParentId != null &&
+    elementSubtreeContainsSlide(slideRoots, layersDrillParentId, element.id);
+  const isolatedInGroupedLayer = staticInGroupLayer && !insideLayersDrillSubtree;
+
+  /** Sadece isGroup kutuları: içine drill olununca kabuğu yanlışlıkla kaydırma/yeniden boyutlamayı kapatır */
+  const freezeGroupHullWhileDrillingInside =
+    !isPreview &&
+    !isLocked &&
+    element.isGroup === true &&
+    layersDrillParentId !== null &&
+    element.id === layersDrillParentId;
+
+  /** Bu grup için Katman drill açık; içeride başka şey seçili olsa bile grup sınırını göster */
+  const drilledIntoThisGroupHull =
+    !isPreview && element.isGroup === true && layersDrillParentId === element.id;
+
   if (element.isVisible === false) return null;
 
   const handleRotationMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return;
     e.stopPropagation();
     e.preventDefault();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -178,51 +214,87 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
     }
   };
 
+  /** Hover benzeri vurgu: seçili OL ya da grubun içine drill ile düzenlenebilir olduğunda grup kabuğu. */
+  const selectionRingClasses =
+    isSelected && !isPreview
+      ? isLocked
+        ? 'msp-ring-2 msp-ring-amber-500 msp-ring-offset-2 msp-ring-offset-background msp-bg-amber-500/10'
+        : selectedElementIds.length > 1
+          ? 'msp-ring-2 msp-ring-emerald-500 msp-ring-offset-2 msp-ring-offset-background msp-bg-emerald-500/10'
+          : 'msp-ring-2 msp-ring-blue-500 msp-ring-offset-2 msp-ring-offset-background msp-bg-blue-500/10'
+      : drilledIntoThisGroupHull
+        ? 'msp-ring-2 msp-ring-blue-500 msp-ring-offset-2 msp-ring-offset-background msp-bg-blue-500/10'
+        : '';
+
+  /** Editor + published slideshow: `:hover` renkleri (inline stilleri !important ile ezer). */
+  const hoverCssTag = formatElementHoverStyleTag(element.id, renderedElement.hoverStyle);
+
+  /** Hover hedefi olarak dış kutuya `data-msp-el-hover`; stiller `:hover { … }` ile uygulanır. */
   const content = (
-    <div
-      className={cn(
-        "msp-w-full msp-h-full msp-cursor-move msp-select-none",
-        // Show borders if enabled and not in preview
-        showBorders && !isPreview && !isSelected ? "msp-border msp-border-dashed msp-border-gray-400" : ""
-      )}
-      style={{
-        ...renderedElement.style,
-        width: '100%',
-        height: '100%',
-        // Ensure children don't inherit zIndex from parent container wrapper
-        zIndex: undefined,
-        ...(renderedElement.rotation ? { transform: `rotate(${renderedElement.rotation}deg)`, transformOrigin: 'msp-center msp-center' } : {}),
-      }}
-      onMouseDown={(e) => {
-        if (isPreview || isLocked) return;
+    <>
+      {hoverCssTag ? <style>{hoverCssTag}</style> : null}
+      <div
+        data-msp-el-hover={element.id}
+        className={cn(
+          'msp-box-border msp-w-full msp-h-full msp-cursor-move msp-select-none msp-rounded-sm msp-transition-shadow',
+          // Show dashed border only when seçili değil; seçiliyken ring öne çıksın
+          showBorders && !isPreview && !isSelected && !drilledIntoThisGroupHull
+            ? 'msp-border msp-border-dashed msp-border-gray-400'
+            : '',
+          selectionRingClasses,
+        )}
+        style={{
+          ...renderedElement.style,
+          width: '100%',
+          height: '100%',
+          // Ensure children don't inherit zIndex from parent container wrapper
+          zIndex: undefined,
+          ...(renderedElement.rotation ? { transform: `rotate(${renderedElement.rotation}deg)`, transformOrigin: 'msp-center msp-center' } : {}),
+        }}
+        onMouseDown={(e) => {
+          if (e.button !== 0) return;
+          if (isPreview || isLocked) return;
 
-        // react-rnd drag start may not expose modifier keys reliably; handle selection here
-        // so state is committed before drag, and avoid double-toggle (mousedown + click).
-        if (e.ctrlKey || e.metaKey) {
+          // react-rnd drag start may not expose modifier keys reliably; handle selection here
+          // so state is committed before drag, and avoid double-toggle (mousedown + click).
+          if (e.ctrlKey || e.metaKey) {
+            e.stopPropagation();
+            flushSync(() => {
+              toggleElementSelection(element.id);
+            });
+            return;
+          }
+
+          // Do not stopPropagation on normal drag — Rnd listens on an ancestor; blocking bubble prevented dragging.
+          if (!selectedElementIds.includes(element.id)) {
+            flushSync(() => {
+              selectElement(element.id);
+            });
+          }
+        }}
+        onDoubleClick={(e) => {
+          if (isPreview || isLocked || isolatedInGroupedLayer) return;
+          if (element.type !== 'box' || !element.children?.length) return;
+          e.preventDefault();
           e.stopPropagation();
-          flushSync(() => {
-            toggleElementSelection(element.id);
-          });
-          return;
-        }
-
-        // Do not stopPropagation on normal drag — Rnd listens on an ancestor; blocking bubble prevented dragging.
-        if (!selectedElementIds.includes(element.id)) {
-          flushSync(() => {
-            selectElement(element.id);
-          });
-        }
-      }}
-      onClick={(e) => {
-        e.stopPropagation();
-      }}
-    >
-      {renderContent()}
-    </div>
+          enterLayersDrill(element.id);
+        }}
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
+      >
+        {renderContent()}
+      </div>
+    </>
   );
 
-  // Preview or grouped subtree: no nested Rnd (avoids blocking parent group drag).
-  if (isPreview || staticInGroupLayer) {
+  // Önizleme veya grupta kapalı düzen — Katman drill aktif olduğunda bu alt-ağaç Rnd ile açılır.
+  if (isPreview || isolatedInGroupedLayer) {
+    const baseZ = Number(renderedElement.style?.zIndex) || 0;
+    /** Liste/katman seçiminde grubun içinde görünür vurgu; ring üstte kalsın diye hafif z-index sıçrat */
+    const bringSelectedForward =
+      isolatedInGroupedLayer && !isPreview && isSelected ? { zIndex: baseZ + 2000 } : {};
+
     const previewStyle: React.CSSProperties = {
       position: 'absolute',
       left: renderedElement.x,
@@ -230,28 +302,52 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
       ...renderedElement.style,
       width: renderedElement.style.width,
       height: renderedElement.style.height,
-      pointerEvents: staticInGroupLayer ? 'none' : undefined,
+      pointerEvents: isolatedInGroupedLayer ? 'none' : undefined,
+      ...bringSelectedForward,
       // rotation must come AFTER element.style spread so it isn't overridden
       ...(renderedElement.rotation ? { transform: `rotate(${renderedElement.rotation}deg)`, transformOrigin: 'msp-center msp-center' } : {}),
     };
 
+    /** Grup içi: seçim görünümü için dış kutuda ring (pointer-events hep none). */
+    const groupLayerOutline =
+      isolatedInGroupedLayer && !isPreview && isSelected
+        ? {
+            outline: `2px solid ${isLocked ? '#f59e0b' : selectedElementIds.length > 1 ? '#22c55e' : '#3b82f6'}`,
+            outlineOffset: '1px',
+          }
+        : {};
+
+    const previewShellClassName = cn(
+      'msp-box-border msp-rounded-sm',
+      isolatedInGroupedLayer && !isPreview ? selectionRingClasses : '',
+      showBorders && isolatedInGroupedLayer && !isPreview && !isSelected ? 'msp-border msp-border-dashed msp-border-gray-400' : '',
+    );
+
     if (element.animation) {
       return (
-        <motion.div
-          initial={element.animation.initial}
-          animate={element.animation.animate}
-          transition={element.animation.transition}
-          style={previewStyle}
-        >
-          {renderContent()}
-        </motion.div>
+        <>
+          {hoverCssTag ? <style>{hoverCssTag}</style> : null}
+          <motion.div
+            data-msp-el-hover={element.id}
+            initial={element.animation.initial}
+            animate={element.animation.animate}
+            transition={element.animation.transition}
+            className={previewShellClassName}
+            style={{ ...previewStyle, ...groupLayerOutline }}
+          >
+            {renderContent()}
+          </motion.div>
+        </>
       );
     }
 
     return (
-      <div style={previewStyle}>
-        {renderContent()}
-      </div>
+      <>
+        {hoverCssTag ? <style>{hoverCssTag}</style> : null}
+        <div className={previewShellClassName} data-msp-el-hover={element.id} style={{ ...previewStyle, ...groupLayerOutline }}>
+          {renderContent()}
+        </div>
+      </>
     );
   }
 
@@ -263,12 +359,41 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
   return (
     <Rnd
       ref={rndRef}
+      // Parent slide uses CSS `transform: scale(canvasZoom)`; mouse deltas must match logical coords.
+      scale={canvasZoom}
       size={{ width: renderedElement.style.width || 'auto', height: renderedElement.style.height || 'auto' }}
       position={{ x: renderedElement.x, y: renderedElement.y }}
       onDrag={(_e, d) => {
-        if (!canvasSettings.snapToElements) return;
-        const { guidesX, guidesY } = calculateSnapGuides(d.x, d.y);
-        setSnapGuides({ x: guidesX, y: guidesY });
+        const currentIds = selectedElementIdsRef.current;
+        const dragLeaderMulti = currentIds.length > 1 && currentIds.includes(element.id);
+
+        if (canvasSettings.snapToElements) {
+          const { guidesX, guidesY } = calculateSnapGuides(d.x, d.y);
+          setSnapGuides({ x: guidesX, y: guidesY });
+        }
+
+        if (!dragLeaderMulti) return;
+
+        const startLeader = dragStartPositionsRef.current[element.id];
+        if (!startLeader) return;
+
+        const deltaX = d.x - startLeader.x;
+        const deltaY = d.y - startLeader.y;
+
+        const updates = currentIds.reduce<Record<string, { x: number; y: number }>>((acc, selectedId) => {
+          const startPos = dragStartPositionsRef.current[selectedId];
+          if (startPos) {
+            acc[selectedId] = {
+              x: startPos.x + deltaX,
+              y: startPos.y + deltaY,
+            };
+          }
+          return acc;
+        }, {});
+
+        if (Object.keys(updates).length > 0) {
+          updateElementsForMode(updates, propertyMode, { skipHistory: true });
+        }
       }}
       onDragStop={(_e, d) => {
         setSnapGuides({ x: [], y: [] });
@@ -315,6 +440,9 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
         }, propertyMode);
       }}
       onDragStart={(e) => {
+        const evt = ('nativeEvent' in e ? e.nativeEvent : e) as Event;
+        if (evt instanceof MouseEvent && evt.button !== 0) return;
+
         e.stopPropagation();
 
         const currentIds = selectedElementIdsRef.current;
@@ -323,9 +451,9 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
           : [element.id];
 
         dragStartPositionsRef.current = activeSelectionIds.reduce<Record<string, { x: number; y: number }>>((acc, selectedId) => {
-          const selectedElement = slides[currentSlideIndex].elements.find(candidate => candidate.id === selectedId);
-          if (selectedElement) {
-            const resolvedSelectedElement = resolveElementProperties(selectedElement, viewMode);
+          const selectedEl = findElementInTree(slides[currentSlideIndex].elements, selectedId);
+          if (selectedEl) {
+            const resolvedSelectedElement = resolveElementProperties(selectedEl, viewMode);
             acc[selectedId] = {
               x: resolvedSelectedElement.x,
               y: resolvedSelectedElement.y,
@@ -335,8 +463,8 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
           return acc;
         }, {});
       }}
-      disableDragging={isPreview || isLocked}
-      enableResizing={!isPreview && !isLocked && isSelected && selectedElementIds.length <= 1
+      disableDragging={isPreview || isLocked || freezeGroupHullWhileDrillingInside}
+      enableResizing={!isPreview && !isLocked && !freezeGroupHullWhileDrillingInside && isSelected && selectedElementIds.length <= 1
         ? { topLeft: true, topRight: true, bottomLeft: true, bottomRight: true, top: false, bottom: true, left: true, right: true }
         : false
       }
@@ -361,7 +489,20 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
       }}
       style={{
         zIndex: renderedElement.style.zIndex,
-        ...(isSelected && !isPreview ? { outline: `1.5px solid ${isLocked ? '#f59e0b' : selectedElementIds.length > 1 ? '#22c55e' : '#3b82f6'}` } : {})
+        ...(!isPreview && (isSelected || drilledIntoThisGroupHull)
+          ? {
+              outline: `2px solid ${
+                isSelected
+                  ? isLocked
+                    ? '#f59e0b'
+                    : selectedElementIds.length > 1
+                      ? '#22c55e'
+                      : '#3b82f6'
+                  : '#3b82f6'
+              }`,
+              outlineOffset: '1px',
+            }
+          : {}),
       }}
     >
       {/* Rotation handle — positioned above element center */}

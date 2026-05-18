@@ -3,6 +3,7 @@ import { Slide, SliderProject, ViewMode } from '@/types/editor';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { resolveElementProperties } from '@/lib/responsive';
+import { formatElementHoverStyleTag } from '@/lib/elementHoverCss';
 
 interface SliderRunnerProps {
   slides?: Slide[];
@@ -105,36 +106,40 @@ const SliderRunner = ({
         >
           {currentSlide.elements.filter(element => element.isVisible !== false).map((element) => {
             const renderedElement = resolveElementProperties(element, viewMode);
+            const hoverCss = formatElementHoverStyleTag(element.id, renderedElement.hoverStyle);
 
             return (
-              <motion.div
-                key={element.id}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                initial={element.animation?.initial as any}
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                animate={element.animation?.animate as any}
-                transition={element.animation?.transition}
-                style={{
-                  position: 'absolute',
-                  left: renderedElement.x,
-                  top: renderedElement.y,
-                  ...renderedElement.style,
-                  ...(renderedElement.rotation ? { transform: `rotate(${renderedElement.rotation}deg)`, transformOrigin: 'msp-center msp-center' } : {}),
-                }}
-              >
-                {renderedElement.type === 'text' && <p>{renderedElement.content}</p>}
-                {renderedElement.type === 'image' && (
-                  <img
-                    src={renderedElement.content}
-                    alt=""
-                    className="msp-w-full msp-h-full msp-object-cover"
-                  />
-                )}
-                {renderedElement.type === 'button' && (
-                  <button className="msp-w-full msp-h-full">{renderedElement.content}</button>
-                )}
-                {renderedElement.type === 'box' && <div className="msp-w-full msp-h-full" />}
-              </motion.div>
+              <React.Fragment key={element.id}>
+                {hoverCss ? <style>{hoverCss}</style> : null}
+                <motion.div
+                  data-msp-el-hover={element.id}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  initial={element.animation?.initial as any}
+                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                  animate={element.animation?.animate as any}
+                  transition={element.animation?.transition}
+                  style={{
+                    position: 'absolute',
+                    left: renderedElement.x,
+                    top: renderedElement.y,
+                    ...renderedElement.style,
+                    ...(renderedElement.rotation ? { transform: `rotate(${renderedElement.rotation}deg)`, transformOrigin: 'msp-center msp-center' } : {}),
+                  }}
+                >
+                  {renderedElement.type === 'text' && <p>{renderedElement.content}</p>}
+                  {renderedElement.type === 'image' && (
+                    <img
+                      src={renderedElement.content}
+                      alt=""
+                      className="msp-w-full msp-h-full msp-object-cover"
+                    />
+                  )}
+                  {renderedElement.type === 'button' && (
+                    <button className="msp-w-full msp-h-full">{renderedElement.content}</button>
+                  )}
+                  {renderedElement.type === 'box' && <div className="msp-w-full msp-h-full" />}
+                </motion.div>
+              </React.Fragment>
             );
           })}
         </motion.div>

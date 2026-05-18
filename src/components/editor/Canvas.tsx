@@ -1,13 +1,26 @@
-import React, { useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Minus, Plus, RotateCcw } from 'lucide-react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
+import { ChevronLeft, ChevronRight, Crosshair, Maximize2, Minus, Plus, RotateCcw } from 'lucide-react';
 import { useEditor } from '@/context/EditorContext';
-import { getEditorViewportSize } from '@/lib/constants';
+import {
+  CANVAS_ZOOM_DEFAULT,
+  CANVAS_ZOOM_MAX,
+  CANVAS_ZOOM_MIN,
+  CANVAS_ZOOM_STEP,
+  getEditorViewportSize,
+} from '@/lib/constants';
 import DraggableElement from './DraggableElement';
+import { CANVAS_RULER_THICKNESS_PX, CanvasViewportRulers } from './CanvasViewportRulers';
 import { cn } from '@/lib/utils';
 import { resolveElementProperties } from '@/lib/responsive';
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { Button } from '@/components/ui/button';
+
+/** Matches `msp-p-4` — included in shell min dimensions for scroll/pan gutters. */
+const CANVAS_SHELL_PAD_PX = 32;
+/** Fits slide into scrollport breathing room (`p-4` + small inset). */
+const CANVAS_FIT_VIEW_MARGIN_EXTRA_PX = 24;
 
 const Canvas = () => {
   const {
@@ -25,39 +38,304 @@ const Canvas = () => {
     snapGuides,
     settings,
     propertyMode,
-    zoomCanvasIn,
-    zoomCanvasOut,
-    resetCanvasZoom,
+    setCanvasZoom,
+    canvasZoom,
   } = useEditor();
 
   const { theme } = useTheme();
   const { t } = useLanguage();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
+  /** Scrollport size (inside padding box) — drives symmetric pan gutters. */
+  const [scrollClient, setScrollClient] = useState({ w: 0, h: 0 });
+  const centerLayoutKeyRef = useRef<string>('');
+  const canvasZoomRef = useRef(canvasZoom);
+  canvasZoomRef.current = canvasZoom;
+
+  const [rulerViewport, setRulerViewport] = useState({
+    scrollLeft: 0,
+    scrollTop: 0,
+    clientWidth: 0,
+    clientHeight: 0,
+    frameOriginX: 0,
+    frameOriginY: 0,
+  });
+
+  const flushRulerViewport = useCallback(() => {
+    const scrollEl = scrollRef.current;
+    const frameEl = frameRef.current;
+    if (!scrollEl || !frameEl) return;
+    const sr = scrollEl.getBoundingClientRect();
+    const fr = frameEl.getBoundingClientRect();
+    setRulerViewport({
+      scrollLeft: scrollEl.scrollLeft,
+      scrollTop: scrollEl.scrollTop,
+      clientWidth: scrollEl.clientWidth,
+      clientHeight: scrollEl.clientHeight,
+      frameOriginX: scrollEl.scrollLeft + (fr.left - sr.left),
+      frameOriginY: scrollEl.scrollTop + (fr.top - sr.top),
+    });
+  }, []);
+
+  const clampZoom = useCallback((z: number) => {
+    return Math.min(CANVAS_ZOOM_MAX, Math.max(CANVAS_ZOOM_MIN, Math.round(z * 100) / 100));
+  }, []);
+
+  /** Zoom and keep pointer (client coords) anchored over the canvas frame — same semantics as Photoshop / map zoom. */
+  const zoomTowardScreenPoint = useCallback(
+    (nextZoomRaw: number, clientX: number, clientY: number) => {
+      const scrollEl = scrollRef.current;
+      const frameEl = frameRef.current;
+      const nextZoom = clampZoom(nextZoomRaw);
+      const prevZoom = canvasZoomRef.current;
+      if (!scrollEl || !frameEl || nextZoom === prevZoom) return;
+
+      const scrollRect = scrollEl.getBoundingClientRect();
+      const vx = clientX - scrollRect.left;
+      const vy = clientY - scrollRect.top;
+      const frameRect = frameEl.getBoundingClientRect();
+
+      const frameLeftScroll = scrollEl.scrollLeft + (frameRect.left - scrollRect.left);
+      const frameTopScroll = scrollEl.scrollTop + (frameRect.top - scrollRect.top);
+      const ux = scrollEl.scrollLeft + vx - frameLeftScroll;
+      const uy = scrollEl.scrollTop + vy - frameTopScroll;
+
+      const fw = frameRect.width;
+      const fh = frameRect.height;
+      const rx = fw > 0 ? ux / fw : 0.5;
+      const ry = fh > 0 ? uy / fh : 0.5;
+
+      flushSync(() => {
+        setCanvasZoom(nextZoom);
+      });
+
+      canvasZoomRef.current = nextZoom;
+
+      const scrollRect2 = scrollEl.getBoundingClientRect();
+      const frameRect2 = frameEl.getBoundingClientRect();
+      const fw2 = frameRect2.width;
+      const fh2 = frameRect2.height;
+      if (fw2 <= 0 || fh2 <= 0) return;
+
+      const frameLeftScroll2 = scrollEl.scrollLeft + (frameRect2.left - scrollRect2.left);
+      const frameTopScroll2 = scrollEl.scrollTop + (frameRect2.top - scrollRect2.top);
+
+      scrollEl.scrollLeft = frameLeftScroll2 + rx * fw2 - vx;
+      scrollEl.scrollTop = frameTopScroll2 + ry * fh2 - vy;
+    },
+    [clampZoom, setCanvasZoom],
+  );
+
+  const centerScrollViewport = useCallback(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl) return;
+
+    const maxSX = Math.max(0, scrollEl.scrollWidth - scrollEl.clientWidth);
+    const maxSY = Math.max(0, scrollEl.scrollHeight - scrollEl.clientHeight);
+    scrollEl.scrollLeft = maxSX / 2;
+    scrollEl.scrollTop = maxSY / 2;
+  }, []);
+
+  const zoomTowardViewportCenter = useCallback(
+    (nextZoomRaw: number) => {
+      const scrollEl = scrollRef.current;
+      if (!scrollEl) {
+        const z = clampZoom(nextZoomRaw);
+        if (z === canvasZoomRef.current) return;
+        flushSync(() => setCanvasZoom(z));
+        canvasZoomRef.current = z;
+        return;
+      }
+      const rect = scrollEl.getBoundingClientRect();
+      zoomTowardScreenPoint(nextZoomRaw, rect.left + rect.width / 2, rect.top + rect.height / 2);
+    },
+    [clampZoom, zoomTowardScreenPoint, setCanvasZoom],
+  );
   const currentSlide = slides[currentSlideIndex];
   const viewport = getEditorViewportSize(viewMode, canvasSettings);
   const scaledWidth = viewport.width * canvasZoom;
   const scaledHeight = viewport.height * canvasZoom;
+
+  const fitCanvasToViewport = useCallback(() => {
+    const scrollEl = scrollRef.current;
+    const vp = getEditorViewportSize(viewMode, canvasSettings);
+    const vu = vp.width;
+    const vh = vp.height;
+
+    if (!scrollEl || vu <= 0 || vh <= 0) return;
+
+    const margin = CANVAS_SHELL_PAD_PX + CANVAS_FIT_VIEW_MARGIN_EXTRA_PX;
+    const usableW = Math.max(vu * CANVAS_ZOOM_MIN, scrollEl.clientWidth - margin * 2);
+    const usableH = Math.max(vh * CANVAS_ZOOM_MIN, scrollEl.clientHeight - margin * 2);
+
+    const fitZ = clampZoom(Math.min(usableW / vu, usableH / vh));
+    zoomTowardViewportCenter(fitZ);
+
+    queueMicrotask(() => {
+      requestAnimationFrame(() => centerScrollViewport());
+    });
+  }, [canvasSettings, clampZoom, centerScrollViewport, viewMode, zoomTowardViewportCenter]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || typeof ResizeObserver === 'undefined') return;
+
+    const update = () => {
+      const w = el.clientWidth;
+      const h = el.clientHeight;
+      setScrollClient(prev => (prev.w === w && prev.h === h ? prev : { w, h }));
+    };
+
+    update();
+
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+
+    return () => ro.disconnect();
+  }, []);
+
+  useEffect(() => {
+    const scrollEl = scrollRef.current;
+    if (!scrollEl || typeof ResizeObserver === 'undefined') return;
+
+    const flush = () => flushRulerViewport();
+
+    scrollEl.addEventListener('scroll', flush, { passive: true });
+
+    const ro = new ResizeObserver(flush);
+    ro.observe(scrollEl);
+    const fe = frameRef.current;
+    if (fe) ro.observe(fe);
+
+    flush();
+
+    return () => {
+      scrollEl.removeEventListener('scroll', flush);
+      ro.disconnect();
+    };
+  }, [flushRulerViewport, scaledWidth, scaledHeight]);
+
+  useLayoutEffect(() => {
+    flushRulerViewport();
+  }, [
+    flushRulerViewport,
+    canvasZoom,
+    viewport.width,
+    viewport.height,
+    scrollClient.w,
+    scrollClient.h,
+    currentSlideIndex,
+  ]);
+
+  /** Aynı moda geri dönünce yeniden ortalayabilmek için önbelleği sıfırla */
+  useLayoutEffect(() => {
+    centerLayoutKeyRef.current = '';
+  }, [viewMode]);
+
+  /** Başlangıçta ortada; zoom’a dokunmaz — görünüm modu veya düzen değişince yeniden ortalar. Orta fare pan için yatay/dikey kaydırılabilir alanı genişletir (`shell` min ölçüleri). */
+  useLayoutEffect(() => {
+    const cw = scrollClient.w;
+    const ch = scrollClient.h;
+    if (cw <= 16 || ch <= 16) return;
+
+    const keyDims = `${viewMode}:${viewport.width}x${viewport.height}`;
+    if (centerLayoutKeyRef.current === keyDims) return;
+
+    centerLayoutKeyRef.current = keyDims;
+
+    const center = () => {
+      const scrollEl = scrollRef.current;
+      if (!scrollEl) return;
+
+      const maxSX = Math.max(0, scrollEl.scrollWidth - scrollEl.clientWidth);
+      const maxSY = Math.max(0, scrollEl.scrollHeight - scrollEl.clientHeight);
+
+      scrollEl.scrollLeft = maxSX / 2;
+      scrollEl.scrollTop = maxSY / 2;
+    };
+
+    queueMicrotask(() => {
+      requestAnimationFrame(center);
+    });
+  }, [viewMode, viewport.width, viewport.height, scrollClient.w, scrollClient.h]);
 
   useEffect(() => {
     const scrollElement = scrollRef.current;
     if (!scrollElement) return;
 
     const handleWheel = (event: WheelEvent) => {
-      if (!event.ctrlKey && !event.metaKey) return;
+      if (isPlaying) return;
+
+      const delta = Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : 0;
+      if (delta === 0) return;
 
       event.preventDefault();
 
-      if (event.deltaY > 0) {
-        zoomCanvasOut();
-      } else {
-        zoomCanvasIn();
-      }
+      const step = CANVAS_ZOOM_STEP;
+      const direction = delta > 0 ? -step : step;
+      const nextZoom = clampZoom(canvasZoomRef.current + direction);
+      zoomTowardScreenPoint(nextZoom, event.clientX, event.clientY);
     };
 
     scrollElement.addEventListener('wheel', handleWheel, { passive: false });
 
     return () => scrollElement.removeEventListener('wheel', handleWheel);
-  }, [zoomCanvasIn, zoomCanvasOut]);
+  }, [clampZoom, isPlaying, zoomTowardScreenPoint]);
+
+  // Middle-mouse drag to pan the canvas viewport (Photoshop-style).
+  useEffect(() => {
+    const scrollElement = scrollRef.current;
+    if (!scrollElement || isPlaying) return;
+
+    let panning = false;
+    let startClientX = 0;
+    let startClientY = 0;
+    let startScrollLeft = 0;
+    let startScrollTop = 0;
+
+    const endPan = () => {
+      if (!panning) return;
+      panning = false;
+      scrollElement.style.cursor = '';
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    };
+
+    const handleMouseDown = (event: MouseEvent) => {
+      if (event.button !== 1) return;
+      event.preventDefault();
+      panning = true;
+      startClientX = event.clientX;
+      startClientY = event.clientY;
+      startScrollLeft = scrollElement.scrollLeft;
+      startScrollTop = scrollElement.scrollTop;
+      scrollElement.style.cursor = 'grabbing';
+      document.body.style.cursor = 'grabbing';
+      document.body.style.userSelect = 'none';
+    };
+
+    const handleMouseMove = (event: MouseEvent) => {
+      if (!panning) return;
+      event.preventDefault();
+      scrollElement.scrollLeft = startScrollLeft - (event.clientX - startClientX);
+      scrollElement.scrollTop = startScrollTop - (event.clientY - startClientY);
+    };
+
+    const handleMouseUp = (event: MouseEvent) => {
+      if (event.button === 1) endPan();
+    };
+
+    scrollElement.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+
+    return () => {
+      scrollElement.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+      endPan();
+    };
+  }, [isPlaying]);
 
   // Autoplay in preview mode
   useEffect(() => {
@@ -197,14 +475,62 @@ const Canvas = () => {
     return style;
   };
 
+  const cw = scrollClient.w;
+  const ch = scrollClient.h;
+  const shellMinStyle: React.CSSProperties =
+    cw > 16 && ch > 16
+      ? {
+
+          minWidth: scaledWidth + CANVAS_SHELL_PAD_PX + cw * 2,
+
+          minHeight: scaledHeight + CANVAS_SHELL_PAD_PX + ch * 2,
+
+        }
+
+      : { minWidth: '100%', minHeight: '100%' };
+
+  const showChromeRulers = !isPlaying && canvasSettings.showRulers;
+  const rulerMetrics = {
+    ...rulerViewport,
+    canvasZoom,
+    logicalW: viewport.width,
+    logicalH: viewport.height,
+  };
+
   return (
-    <div className="msp-relative msp-flex-1 msp-min-h-0 msp-min-w-0 msp-bg-muted msp-overflow-hidden">
+    <div className="msp-relative msp-flex msp-min-h-0 msp-w-full msp-flex-1 msp-flex-col msp-bg-muted msp-overflow-hidden">
       <div
-        ref={scrollRef}
-        className="msp-h-full msp-w-full msp-overflow-auto"
+        className={cn('msp-min-h-0 msp-w-full msp-flex-1', !showChromeRulers && 'msp-flex msp-flex-col')}
+        style={
+          showChromeRulers
+            ? {
+                display: 'grid',
+                gridTemplateColumns: `${CANVAS_RULER_THICKNESS_PX}px minmax(0, 1fr)`,
+                gridTemplateRows: `${CANVAS_RULER_THICKNESS_PX}px minmax(0, 1fr)`,
+                gap: 0,
+                minHeight: 0,
+              }
+            : { minHeight: 0, flex: 1, display: 'flex', flexDirection: 'column' as const }
+        }
       >
-        <div className="msp-inline-flex msp-min-w-full msp-justify-center msp-p-4">
+        {showChromeRulers && <CanvasViewportRulers metrics={rulerMetrics} />}
+        <div
+          ref={scrollRef}
+          className={cn(
+            'msp-min-h-0 msp-w-full msp-overflow-auto',
+            !showChromeRulers && 'msp-flex-1',
+            showChromeRulers && 'msp-col-start-2 msp-row-start-2 msp-min-w-0',
+            // Keep overflow scrollable for wheel zoom + middle-mouse pan, but hide native
+            // scrollbars so layout doesn’t reserve a gutter strip that jumps when zooming.
+            '[scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden',
+          )}
+        >
+        <div
+          className="msp-box-border msp-flex msp-min-h-full msp-min-w-full msp-flex-col msp-items-center msp-justify-center msp-p-4"
+          style={shellMinStyle}
+        >
           <div
+            ref={frameRef}
             className="msp-relative msp-shrink-0"
             style={{ width: scaledWidth, height: scaledHeight }}
           >
@@ -319,6 +645,7 @@ const Canvas = () => {
           </div>
         </div>
       </div>
+      </div>
 
       {!isPlaying && (
         <div className="msp-pointer-events-none msp-absolute msp-bottom-3 msp-right-3 msp-z-50 msp-flex msp-items-center msp-gap-1">
@@ -328,7 +655,7 @@ const Canvas = () => {
               variant="ghost"
               size="icon"
               className="msp-h-7 msp-w-7"
-              onClick={zoomCanvasOut}
+              onClick={() => zoomTowardViewportCenter(canvasZoomRef.current - CANVAS_ZOOM_STEP)}
               title={t('editor.canvas.zoomOut')}
             >
               <Minus className="msp-h-3.5 msp-w-3.5" />
@@ -336,7 +663,7 @@ const Canvas = () => {
             <button
               type="button"
               className="msp-min-w-[3rem] msp-px-1 msp-text-xs msp-font-medium msp-tabular-nums hover:msp-bg-muted msp-rounded-sm msp-h-7"
-              onClick={resetCanvasZoom}
+              onClick={() => zoomTowardViewportCenter(CANVAS_ZOOM_DEFAULT)}
               title={t('editor.canvas.zoomReset')}
             >
               {Math.round(canvasZoom * 100)}%
@@ -346,7 +673,7 @@ const Canvas = () => {
               variant="ghost"
               size="icon"
               className="msp-h-7 msp-w-7"
-              onClick={zoomCanvasIn}
+              onClick={() => zoomTowardViewportCenter(canvasZoomRef.current + CANVAS_ZOOM_STEP)}
               title={t('editor.canvas.zoomIn')}
             >
               <Plus className="msp-h-3.5 msp-w-3.5" />
@@ -356,10 +683,30 @@ const Canvas = () => {
               variant="ghost"
               size="icon"
               className="msp-h-7 msp-w-7"
-              onClick={resetCanvasZoom}
+              onClick={fitCanvasToViewport}
+              title={t('editor.canvas.fitToViewport')}
+            >
+              <Maximize2 className="msp-h-3.5 msp-w-3.5" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="msp-h-7 msp-w-7"
+              onClick={() => zoomTowardViewportCenter(CANVAS_ZOOM_DEFAULT)}
               title={t('editor.canvas.zoomReset')}
             >
               <RotateCcw className="msp-h-3.5 msp-w-3.5" />
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="msp-h-7 msp-w-7"
+              onClick={centerScrollViewport}
+              title={t('editor.canvas.centerView')}
+            >
+              <Crosshair className="msp-h-3.5 msp-w-3.5" />
             </Button>
           </div>
         </div>

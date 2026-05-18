@@ -1,83 +1,101 @@
 import { ChevronLeft, ChevronRight, Clock, Eye, EyeOff, GripVertical, Lock, Plus, Trash2, Unlock } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { Button } from '@/components/ui/button';
 import { EditorElement } from '@/types/editor';
-import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 import { useEditor } from '@/context/EditorContext';
 import { useLanguage } from '@/context/LanguageContext';
+import ContextMenu from '@/components/editor/ContextMenu';
+
+function findElementInSlideTree(elements: EditorElement[], id: string): EditorElement | null {
+  for (const el of elements) {
+    if (el.id === id) return el;
+    if (el.children?.length) {
+      const found = findElementInSlideTree(el.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+}
 
 interface LayerItemProps {
   element: EditorElement;
   isSelected: boolean;
+  selectionCount: number;
   selectElement: (id: string | null) => void;
   toggleElementSelection: (id: string) => void;
   updateElement: (id: string, updates: Partial<EditorElement>) => void;
   removeElement: (id: string) => void;
+  enterLayersDrill: (parentElementId: string) => void;
 }
 
-const LayerItem = ({ element, isSelected, selectElement, toggleElementSelection, updateElement, removeElement }: LayerItemProps) => {
+const LayerItem = ({ element, isSelected, selectionCount, selectElement, toggleElementSelection, updateElement, removeElement, enterLayersDrill }: LayerItemProps) => {
   const controls = useDragControls();
   const defaultName = element.type.charAt(0).toUpperCase() + element.type.slice(1);
   const displayName = element.name?.trim() || defaultName;
-  const [draftName, setDraftName] = useState(displayName);
-
-  useEffect(() => {
-    setDraftName(displayName);
-  }, [displayName]);
-
-  const commitName = () => {
-    const nextName = draftName.trim();
-    if (nextName === displayName) return;
-
-    updateElement(element.id, { name: nextName || undefined });
-  };
 
   return (
     <Reorder.Item
       value={element}
       id={element.id}
+      data-layer-row={element.id}
       dragListener={false}
       dragControls={controls}
-      className={cn(
-        "msp-flex msp-items-center msp-gap-2 msp-p-2 msp-rounded-md msp-text-sm msp-cursor-pointer hover:msp-bg-secondary/50 msp-group msp-relative msp-select-none",
-        isSelected ? "bg-secondary" : "bg-card"
-      )}
-      onClick={(event) => {
-        if (event.ctrlKey || event.metaKey) {
-          toggleElementSelection(element.id);
-          return;
-        }
-
-        selectElement(element.id);
-      }}
+      aria-selected={isSelected}
+      className="msp-flex msp-min-w-0 msp-w-full msp-flex-col"
     >
+      <div className="msp-w-full msp-min-w-0">
+      <ContextMenu elementId={element.id}>
+        <div
+          className={cn(
+            'msp-flex msp-flex-1 msp-items-center msp-gap-2 msp-min-w-0 msp-w-full msp-p-2 msp-rounded-md msp-text-sm msp-cursor-pointer msp-relative msp-group msp-select-none',
+            'msp-border msp-border-transparent msp-shadow-sm',
+            !isSelected && 'msp-bg-card hover:msp-bg-secondary/65',
+            isSelected &&
+              cn(
+                'msp-z-[1] msp-shadow-[0_0_0_1px_rgba(0,0,0,.06)] dark:msp-shadow-[0_0_0_1px_rgba(255,255,255,.08)]',
+                'msp-ring-2 msp-ring-offset-2 msp-ring-offset-background',
+                element.isLocked &&
+                  cn('msp-ring-amber-500 dark:msp-ring-amber-400 msp-bg-amber-500/16 dark:msp-bg-amber-500/22'),
+                !element.isLocked &&
+                  selectionCount > 1 &&
+                  cn('msp-ring-emerald-500 dark:msp-ring-emerald-400 msp-bg-emerald-500/16 dark:msp-bg-emerald-500/22'),
+                !element.isLocked &&
+                  selectionCount <= 1 &&
+                  cn('msp-ring-blue-500 dark:msp-ring-blue-400 msp-bg-blue-500/16 dark:msp-bg-blue-500/24'),
+              ),
+          )}
+          onClick={(event) => {
+            if (event.ctrlKey || event.metaKey) {
+              toggleElementSelection(element.id);
+              return;
+            }
+
+            selectElement(element.id);
+          }}
+          onDoubleClick={(event) => {
+            if (!element.children?.length) return;
+            event.preventDefault();
+            event.stopPropagation();
+            enterLayersDrill(element.id);
+          }}
+        >
       <div
         onPointerDown={(e) => controls.start(e)}
-        className="msp-cursor-grab active:msp-cursor-grabbing msp-p-1 hover:msp-bg-muted msp-rounded"
+        className="msp-cursor-grab active:msp-cursor-grabbing msp-p-1 hover:msp-bg-muted msp-rounded msp-shrink-0"
       >
         <GripVertical className="msp-h-3 msp-w-3 msp-text-muted-foreground" />
       </div>
 
       <div className="msp-flex-1 msp-min-w-0">
-        <Input
-          value={draftName}
-          onChange={(event) => setDraftName(event.target.value)}
-          onBlur={commitName}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              event.currentTarget.blur();
-            }
-          }}
-          onClick={(event) => event.stopPropagation()}
-          className="msp-h-6 msp-border-0 msp-bg-transparent msp-px-1 msp-text-xs msp-font-medium focus-visible:msp-ring-1"
-        />
-        <span className="msp-text-muted-foreground msp-ml-2 msp-font-normal msp-text-xs">
-          {element.content.substring(0, 15)}
-          {element.content.length > 15 ? '...' : ''}
+        <span className="msp-block msp-truncate msp-text-xs msp-font-semibold" title={displayName}>
+          {displayName}
+        </span>
+        <span className="msp-block msp-truncate msp-text-muted-foreground msp-font-normal msp-text-xs" title={element.content}>
+          {element.content || '\u00A0'}
         </span>
       </div>
 
@@ -126,6 +144,9 @@ const LayerItem = ({ element, isSelected, selectElement, toggleElementSelection,
       >
         <Trash2 className="msp-h-3 msp-w-3" />
       </Button>
+        </div>
+      </ContextMenu>
+      </div>
     </Reorder.Item>
   );
 };
@@ -139,8 +160,13 @@ const LayerPanel = () => {
     selectElement,
     toggleElementSelection,
     removeElement,
+    removeSlide,
     updateElement,
     reorderElements,
+    reorderGroupChildren,
+    layersDrillParentId,
+    enterLayersDrill,
+    exitLayersDrill,
     addSlide,
     setCurrentSlide,
   } = useEditor();
@@ -148,30 +174,50 @@ const LayerPanel = () => {
 
   const currentSlide = slides[currentSlideIndex];
 
+  const drilledParentEl = useMemo(() => {
+    if (!layersDrillParentId || !currentSlide?.elements) return null;
+    return findElementInSlideTree(currentSlide.elements, layersDrillParentId);
+  }, [currentSlide?.elements, layersDrillParentId]);
+
+  const sourceLayers = drilledParentEl?.children?.length
+    ? drilledParentEl.children
+    : currentSlide?.elements ?? [];
+
   const [items, setItems] = useState<EditorElement[]>([]);
 
   useEffect(() => {
-    if (!currentSlide?.elements) return;
-    const sorted = [...currentSlide.elements].sort((a, b) => {
+    if (!currentSlide?.elements && sourceLayers.length === 0) return;
+    const sorted = [...sourceLayers].sort((a, b) => {
       const zA = Number(a.style.zIndex) || 0;
       const zB = Number(b.style.zIndex) || 0;
       if (zA !== zB) return zB - zA;
-      return currentSlide.elements.indexOf(b) - currentSlide.elements.indexOf(a);
+      return sourceLayers.indexOf(b) - sourceLayers.indexOf(a);
     });
     setItems(prev => {
       if (JSON.stringify(prev) !== JSON.stringify(sorted)) return sorted;
       return prev;
     });
-  }, [currentSlide?.elements]);
+  }, [currentSlide?.elements, layersDrillParentId, sourceLayers]);
 
   const handleReorder = (newOrder: EditorElement[]) => {
     setItems(newOrder);
     const ids = newOrder.map(item => item.id);
-    reorderElements(ids);
+    if (layersDrillParentId) {
+      reorderGroupChildren(layersDrillParentId, ids);
+    } else {
+      reorderElements(ids);
+    }
   };
 
-  // removeSlide is not exposed directly; use the context's removeSlide if available
-  const { removeSlide } = useEditor();
+  /** Tek seçimde seçili katman kartı liste içinde görünsün (drill/root değişiminde dahil). */
+  useLayoutEffect(() => {
+    if (selectedElementIds.length !== 1) return;
+    const id = selectedElementIds[0];
+    if (!items.some((el) => el.id === id)) return;
+    const escaped = typeof CSS !== 'undefined' && 'escape' in CSS ? CSS.escape(id) : id;
+    const row = document.querySelector<HTMLElement>(`[data-layer-row="${escaped}"]`);
+    row?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }, [selectedElementIds, items, layersDrillParentId]);
 
   return (
     <Tabs defaultValue="layers" className="msp-flex msp-flex-col msp-h-full msp-overflow-hidden">
@@ -198,19 +244,37 @@ const LayerPanel = () => {
             Bu slayta eleman eklenmemiş
           </div>
         ) : (
-          <Reorder.Group axis="y" values={items} onReorder={handleReorder} className="msp-space-y-1">
+          <>
+            {layersDrillParentId ? (
+              <div className="msp-mb-2 msp-flex msp-shrink-0 msp-items-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  className="msp-h-7 msp-gap-1 msp-pl-2 msp-pr-3 msp-text-xs"
+                  onClick={exitLayersDrill}
+                >
+                  <ChevronLeft className="msp-h-3.5 msp-w-3.5 msp-shrink-0" />
+                  {t('editor.layers.backFromGroup')}
+                </Button>
+              </div>
+            ) : null}
+            <Reorder.Group axis="y" values={items} onReorder={handleReorder} className="msp-flex msp-w-full msp-min-w-0 msp-flex-col msp-gap-1">
             {items.map((element) => (
               <LayerItem
                 key={element.id}
                 element={element}
+                selectionCount={selectedElementIds.length}
                 isSelected={selectedElementIds.includes(element.id) || selectedElementId === element.id}
                 selectElement={selectElement}
                 toggleElementSelection={toggleElementSelection}
                 updateElement={updateElement}
                 removeElement={removeElement}
+                enterLayersDrill={enterLayersDrill}
               />
             ))}
           </Reorder.Group>
+          </>
         )}
       </TabsContent>
 

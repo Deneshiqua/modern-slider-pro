@@ -16,11 +16,24 @@ export type ElementStyle = React.CSSProperties & {
   objectFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down';
 };
 
+export type ElementHoverColors = Partial<
+  Pick<
+    ElementStyle,
+    | 'backgroundColor'
+    | 'color'
+    | 'borderTopColor'
+    | 'borderRightColor'
+    | 'borderBottomColor'
+    | 'borderLeftColor'
+  >
+>;
+
 export interface ResponsiveElementProperties {
   x?: number;
   y?: number;
   rotation?: number;
   style?: Partial<ElementStyle>;
+  hoverStyle?: ElementHoverColors;
 }
 
 export interface EditorElement {
@@ -34,6 +47,7 @@ export interface EditorElement {
   y: number;
   rotation?: number; // degrees 0-360
   style: ElementStyle;
+  hoverStyle?: ElementHoverColors;
   responsive?: Partial<Record<ViewMode, ResponsiveElementProperties>>;
   animation?: AnimationConfig;
   children?: EditorElement[]; // For nested elements (Box)
@@ -74,6 +88,7 @@ export type SliderEditorSavePayload = SliderProject;
 export interface CanvasSettings {
   gridSize: number;
   showGrid: boolean;
+  showRulers: boolean;
   snapToElements: boolean;
   canvasWidth: number;
   canvasHeight: number;

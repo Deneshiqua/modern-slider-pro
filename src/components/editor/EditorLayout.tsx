@@ -4,7 +4,7 @@ import Canvas from './Canvas';
 import { EditorProvider, useEditor } from '@/context/EditorContext';
 import LayerPanel from './LayerPanel';
 import { Language } from '@/lib/translations';
-import { LanguageProvider, TranslationDictionary, useLanguage } from '@/context/LanguageContext';
+import { LanguageProvider, TranslationDictionary, useLanguage, type TranslationKey } from '@/context/LanguageContext';
 import PropertiesPanel from './PropertiesPanel';
 import { PublishedSlidesProvider } from '@/context/PublishedSlidesContext';
 import React from 'react';
@@ -13,10 +13,38 @@ import { Theme, ThemeProvider, useTheme } from '@/context/ThemeContext';
 import Toolbar from './Toolbar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useDirtyReloadGuard } from '@/hooks/useDirtyReloadGuard';
-import { Toaster } from 'sonner';
-
 import { CanvasSettings, Slide, SliderEditorSavePayload, SliderSettings } from '@/types/editor';
 import { cn } from '@/lib/utils';
+import { toast, Toaster } from 'sonner';
+
+const CLIPBOARD_FEEDBACK_MS = 2200;
+
+const toastClipboardAction = (
+  kind: 'copy' | 'cut' | 'paste',
+  count: number,
+  t: (key: TranslationKey | string) => string,
+) => {
+  if (count <= 0) return;
+  let message: string;
+  if (count === 1) {
+    message = t(
+      kind === 'copy'
+        ? 'editor.clipboard.copiedOne'
+        : kind === 'cut'
+          ? 'editor.clipboard.cutOne'
+          : 'editor.clipboard.pastedOne',
+    );
+  } else {
+    const manyKey =
+      kind === 'copy'
+        ? 'editor.clipboard.copiedMany'
+        : kind === 'cut'
+          ? 'editor.clipboard.cutMany'
+          : 'editor.clipboard.pastedMany';
+    message = t(manyKey).replace(/\{count\}/g, String(count));
+  }
+  toast.success(message, { duration: CLIPBOARD_FEEDBACK_MS });
+};
 
 export type SliderEditorProps = {
   onDemoSave?: (slides: Slide[]) => void;
@@ -47,7 +75,18 @@ const EditorShell = ({
 }: Pick<SliderEditorProps, 'onDemoSave' | 'onSave' | 'saveButtonLabel' | 'showToaster' | 'className'>) => {
   const { theme } = useTheme();
   const { t } = useLanguage();
-  const { canRedo, canUndo, isDirty, redo, undo } = useEditor();
+  const {
+    canRedo,
+    canUndo,
+    isDirty,
+    isPlaying,
+    redo,
+    undo,
+    copySelectionToClipboard,
+    cutSelectionToClipboard,
+    pasteClipboardElements,
+    selectAllRootElements,
+  } = useEditor();
 
   useDirtyReloadGuard(isDirty, t);
 
@@ -64,11 +103,47 @@ const EditorShell = ({
 
     const handleKeyboardShortcut = (event: KeyboardEvent) => {
       if (isEditableTarget(event.target)) return;
+      if (isPlaying) return;
 
       const key = event.key.toLowerCase();
       const usesModifier = event.ctrlKey || event.metaKey;
       const wantsUndo = usesModifier && key === 'z' && !event.shiftKey;
       const wantsRedo = usesModifier && (key === 'y' || (key === 'z' && event.shiftKey));
+      const wantsCopy = usesModifier && key === 'c' && !event.shiftKey;
+      const wantsCut = usesModifier && key === 'x' && !event.shiftKey;
+      const wantsPaste = usesModifier && key === 'v' && !event.shiftKey;
+      const wantsSelectAll = usesModifier && key === 'a' && !event.shiftKey;
+
+      if (wantsSelectAll) {
+        event.preventDefault();
+        selectAllRootElements();
+        return;
+      }
+
+      if (wantsCopy) {
+        const n = copySelectionToClipboard();
+        if (n > 0) {
+          event.preventDefault();
+          toastClipboardAction('copy', n, t);
+        }
+        return;
+      }
+      if (wantsCut) {
+        const n = cutSelectionToClipboard();
+        if (n > 0) {
+          event.preventDefault();
+          toastClipboardAction('cut', n, t);
+        }
+        return;
+      }
+      if (wantsPaste) {
+        const n = pasteClipboardElements();
+        if (n > 0) {
+          event.preventDefault();
+          toastClipboardAction('paste', n, t);
+        }
+        return;
+      }
 
       if (wantsUndo && canUndo) {
         event.preventDefault();
@@ -84,7 +159,18 @@ const EditorShell = ({
     globalThis.window.addEventListener('keydown', handleKeyboardShortcut);
 
     return () => globalThis.window.removeEventListener('keydown', handleKeyboardShortcut);
-  }, [canRedo, canUndo, redo, undo]);
+  }, [
+    canRedo,
+    canUndo,
+    copySelectionToClipboard,
+    cutSelectionToClipboard,
+    isPlaying,
+    pasteClipboardElements,
+    redo,
+    selectAllRootElements,
+    t,
+    undo,
+  ]);
 
   return (
     <div
@@ -99,7 +185,11 @@ const EditorShell = ({
       <div className="msp-flex msp-flex-1 msp-min-h-0 msp-min-w-0 msp-overflow-hidden">
         <Sidebar />
         <ResizablePanelGroup direction="horizontal" className="msp-flex-1 msp-min-h-0 msp-min-w-0">
-          <ResizablePanel defaultSize={75} minSize={45} className="msp-min-h-0 msp-min-w-0">
+          <ResizablePanel
+            defaultSize={75}
+            minSize={45}
+            className="msp-flex msp-h-full msp-min-h-0 msp-min-w-0 msp-flex-col msp-overflow-hidden"
+          >
             <Canvas />
           </ResizablePanel>
 
@@ -156,6 +246,7 @@ const EditorLayout = ({
       onThemeChange={onThemeChange}
       storageKey={themeStorageKey}
       useSystemTheme={useSystemTheme}
+      attachThemeClassToHtml
     >
       <LanguageProvider
         language={language}

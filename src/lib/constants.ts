@@ -45,6 +45,7 @@ export const CANVAS_ZOOM_DEFAULT = 1;
 export const DEFAULT_CANVAS_SETTINGS: CanvasSettings = {
   gridSize: 50,
   showGrid: true,
+  showRulers: false,
   snapToElements: true,
   canvasWidth: 1280,
   canvasHeight: 720,

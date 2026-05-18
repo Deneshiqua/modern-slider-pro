@@ -1,4 +1,4 @@
-import { ANIMATION_PRESETS, BORDER_RADII, FONT_SIZES } from '@/lib/constants';
+import { ANIMATION_PRESETS, FONT_SIZES } from '@/lib/constants';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { ArrowDown, ArrowUp, BringToFront, Image as ImageIcon, Palette, SendToBack, Type, Video } from 'lucide-react';
 import React, { useState } from 'react';
@@ -12,11 +12,13 @@ import { Label } from '@/components/ui/label';
 import MediaManager from './MediaManager';
 import { Slider } from "@/components/ui/slider";
 import { Switch } from '@/components/ui/switch';
-import { EditorElement, ResponsivePropertyMode } from '@/types/editor';
 import { getElementPropertiesForMode } from '@/lib/responsive';
 import { useEditor } from '@/context/EditorContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { EditorElement, ResponsivePropertyMode } from '@/types/editor';
 import AlignmentControls from './AlignmentControls';
+import ColorAndBorderControls from './ColorAndBorderControls';
+import SpacingControls from './SpacingControls';
 
 const PropertiesPanel = () => {
   const {
@@ -37,7 +39,7 @@ const PropertiesPanel = () => {
   const { t } = useLanguage();
 
   // State to persist accordion open/close status
-  const [openAccordionItems, setOpenAccordionItems] = useState<string[]>(['style', 'content', 'settings']);
+  const [openAccordionItems, setOpenAccordionItems] = useState<string[]>(['style', 'color', 'spacing', 'content', 'settings']);
   const [isBackgroundMediaManagerOpen, setIsBackgroundMediaManagerOpen] = useState(false);
 
   const currentSlide = slides[currentSlideIndex];
@@ -93,8 +95,8 @@ const PropertiesPanel = () => {
                   </TabsList>
 
                   <TabsContent value="color" className="msp-space-y-2 msp-mt-2">
-                    <Label className="msp-text-xs">{t('editor.properties.backgroundColor')}</Label>
                     <ColorPicker
+                      label={t('editor.properties.backgroundColor')}
                       value={currentSlide.background || ''}
                       onChange={(color) => updateSlideBackground(color || '#ffffff', 'color')}
                     />
@@ -160,13 +162,16 @@ const PropertiesPanel = () => {
     }
   };
 
+  const accordionTriggerClass =
+    'msp-min-h-11 msp-px-4 msp-py-3 msp-text-xs msp-font-medium msp-text-foreground msp-transition-colors hover:msp-no-underline hover:msp-bg-muted/55 data-[state=closed]:msp-bg-muted/15 data-[state=open]:msp-bg-muted/40 data-[state=open]:msp-border-b msp-border-border';
+  const accordionBodyClass = 'msp-px-3 msp-pt-3 msp-pb-4 msp-bg-muted/20';
+
   return (
     <div className="msp-flex msp-flex-col msp-h-full msp-overflow-hidden msp-bg-card">
-      <div className="msp-p-4 msp-border-b msp-font-semibold msp-shrink-0">{t('editor.properties.title')}</div>
+      <div className="msp-px-3 msp-py-2 msp-border-b msp-font-semibold msp-text-xs msp-shrink-0">{t('editor.properties.title')}</div>
 
       <div className="msp-flex-1 msp-overflow-y-auto">
         <div className="msp-p-3 msp-border-b msp-space-y-2">
-          <Label className="msp-text-xs">Özellik Modu</Label>
           <Tabs value={propertyMode} onValueChange={(value) => handlePropertyModeChange(value as ResponsivePropertyMode)}>
             <TabsList className="msp-grid msp-grid-cols-4 msp-h-8">
               <TabsTrigger value="default" className="msp-text-xs">Default</TabsTrigger>
@@ -180,140 +185,124 @@ const PropertiesPanel = () => {
           </p>
         </div>
 
-        <Accordion
-          type="multiple"
-          value={openAccordionItems}
-          onValueChange={setOpenAccordionItems}
-          className="msp-w-full"
-        >
+        <div className="msp-px-3 msp-py-4">
+          <Accordion
+            type="multiple"
+            value={openAccordionItems}
+            onValueChange={setOpenAccordionItems}
+            className="msp-w-full msp-space-y-3"
+          >
 
-          {/* Style Section */}
-          <AccordionItem value="style">
-            <AccordionTrigger className="msp-px-3 msp-py-2 msp-text-xs hover:msp-no-underline hover:msp-bg-muted/50">{t('editor.properties.style')}</AccordionTrigger>
-            <AccordionContent className="msp-px-3 msp-py-2 msp-space-y-3">
-              {/* Layer Management */}
-              <div className="msp-space-y-1.5 msp-pb-3 msp-border-b">
-                <Label className="msp-text-xs">{t('editor.properties.layerOrder')}</Label>
-                <div className="msp-flex msp-gap-1.5">
-                  <Button variant="outline" size="icon" className="msp-h-7 msp-w-7" onClick={() => bringToFront(activeElement.id)} title={t('editor.contextMenu.bringToFront')}>
-                    <BringToFront className="msp-h-3 msp-w-3" />
-                  </Button>
-                  <Button variant="outline" size="icon" className="msp-h-7 msp-w-7" onClick={() => bringForward(activeElement.id)} title={t('editor.contextMenu.bringForward')}>
-                    <ArrowUp className="msp-h-3 msp-w-3" />
-                  </Button>
-                  <Button variant="outline" size="icon" className="msp-h-7 msp-w-7" onClick={() => sendBackward(activeElement.id)} title={t('editor.contextMenu.sendBackward')}>
-                    <ArrowDown className="msp-h-3 msp-w-3" />
-                  </Button>
-                  <Button variant="outline" size="icon" className="msp-h-7 msp-w-7" onClick={() => sendToBack(activeElement.id)} title={t('editor.contextMenu.sendToBack')}>
-                    <SendToBack className="msp-h-3 msp-w-3" />
-                  </Button>
+            {/* Style Section */}
+            <AccordionItem value="style">
+              <AccordionTrigger className={accordionTriggerClass}>{t('editor.properties.style')}</AccordionTrigger>
+              <AccordionContent className={`${accordionBodyClass} msp-space-y-3`}>
+                {/* Layer Management */}
+                <div className="msp-space-y-1.5 msp-pb-3 msp-border-b">
+                  <Label className="msp-text-xs">{t('editor.properties.layerOrder')}</Label>
+                  <div className="msp-flex msp-gap-1.5">
+                    <Button variant="outline" size="icon" className="msp-h-7 msp-w-7" onClick={() => bringToFront(activeElement.id)} title={t('editor.contextMenu.bringToFront')}>
+                      <BringToFront className="msp-h-3 msp-w-3" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="msp-h-7 msp-w-7" onClick={() => bringForward(activeElement.id)} title={t('editor.contextMenu.bringForward')}>
+                      <ArrowUp className="msp-h-3 msp-w-3" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="msp-h-7 msp-w-7" onClick={() => sendBackward(activeElement.id)} title={t('editor.contextMenu.sendBackward')}>
+                      <ArrowDown className="msp-h-3 msp-w-3" />
+                    </Button>
+                    <Button variant="outline" size="icon" className="msp-h-7 msp-w-7" onClick={() => sendToBack(activeElement.id)} title={t('editor.contextMenu.sendToBack')}>
+                      <SendToBack className="msp-h-3 msp-w-3" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
 
-              <div className="msp-grid msp-grid-cols-2 msp-gap-3">
+                <div className="msp-grid msp-grid-cols-2 msp-gap-3">
+                  <div className="msp-space-y-1">
+                    <Label className="msp-text-xs">X {t('editor.properties.position')}</Label>
+                    <Input
+                      className="msp-h-7 msp-text-xs"
+                      type="number"
+                      value={editableElement?.x ?? activeElement.x}
+                      onChange={(e) => updateElementForMode(activeElement.id, { x: Number(e.target.value) }, propertyMode)}
+                    />
+                  </div>
+                  <div className="msp-space-y-1">
+                    <Label className="msp-text-xs">Y {t('editor.properties.position')}</Label>
+                    <Input
+                      className="msp-h-7 msp-text-xs"
+                      type="number"
+                      value={editableElement?.y ?? activeElement.y}
+                      onChange={(e) => updateElementForMode(activeElement.id, { y: Number(e.target.value) }, propertyMode)}
+                    />
+                  </div>
+                </div>
+
+                <div className="msp-grid msp-grid-cols-2 msp-gap-3">
+                  <div className="msp-space-y-1">
+                    <Label className="msp-text-xs">{t('editor.properties.size')} (W)</Label>
+                    <Input
+                      className="msp-h-7 msp-text-xs"
+                      type="number"
+                      value={editableElement?.style.width || ''}
+                      onChange={(e) => handleResponsiveStyleChange('width', Number(e.target.value))}
+                      placeholder="Auto"
+                    />
+                  </div>
+                  <div className="msp-space-y-1">
+                    <Label className="msp-text-xs">{t('editor.properties.size')} (H)</Label>
+                    <Input
+                      className="msp-h-7 msp-text-xs"
+                      type="number"
+                      value={editableElement?.style.height || ''}
+                      onChange={(e) => handleResponsiveStyleChange('height', Number(e.target.value))}
+                      placeholder="Auto"
+                    />
+                  </div>
+                </div>
+
                 <div className="msp-space-y-1">
-                  <Label className="msp-text-xs">X {t('editor.properties.position')}</Label>
+                  <Label className="msp-text-xs">Döndürme (°)</Label>
                   <Input
                     className="msp-h-7 msp-text-xs"
                     type="number"
-                    value={editableElement?.x ?? activeElement.x}
-                    onChange={(e) => updateElementForMode(activeElement.id, { x: Number(e.target.value) }, propertyMode)}
+                    min={0}
+                    max={360}
+                    value={editableElement?.rotation ?? 0}
+                    onChange={(e) => updateElementForMode(activeElement.id, { rotation: ((Number(e.target.value) % 360) + 360) % 360 }, propertyMode)}
                   />
                 </div>
+
+                {/* Object Fit Control for Images */}
+                {activeElement.type === 'image' && (
+                  <div className="msp-space-y-1">
+                    <Label className="msp-text-xs">{t('editor.properties.imageFit')}</Label>
+                    <Select
+                      value={editableElement?.style.objectFit || 'cover'}
+                      onValueChange={(val) => handleResponsiveStyleChange('objectFit', val)}
+                    >
+                      <SelectTrigger className="msp-h-7 msp-text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cover">{t('editor.properties.fitCover')}</SelectItem>
+                        <SelectItem value="contain">{t('editor.properties.fitContain')}</SelectItem>
+                        <SelectItem value="fill">{t('editor.properties.fitFill')}</SelectItem>
+                        <SelectItem value="none">{t('editor.properties.fitNone')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
                 <div className="msp-space-y-1">
-                  <Label className="msp-text-xs">Y {t('editor.properties.position')}</Label>
-                  <Input
-                    className="msp-h-7 msp-text-xs"
-                    type="number"
-                    value={editableElement?.y ?? activeElement.y}
-                    onChange={(e) => updateElementForMode(activeElement.id, { y: Number(e.target.value) }, propertyMode)}
+                  <Label className="msp-text-xs">{t('editor.properties.opacity')} ({activeElementOpacity})</Label>
+                  <Slider
+                    value={[activeElementOpacity]}
+                    max={1}
+                    step={0.1}
+                    onValueChange={([val]) => handleResponsiveStyleChange('opacity', val)}
                   />
                 </div>
-              </div>
 
-              <div className="msp-grid msp-grid-cols-2 msp-gap-3">
-                <div className="msp-space-y-1">
-                  <Label className="msp-text-xs">{t('editor.properties.size')} (W)</Label>
-                  <Input
-                    className="msp-h-7 msp-text-xs"
-                    type="number"
-                    value={editableElement?.style.width || ''}
-                    onChange={(e) => handleResponsiveStyleChange('width', Number(e.target.value))}
-                    placeholder="Auto"
-                  />
-                </div>
-                <div className="msp-space-y-1">
-                  <Label className="msp-text-xs">{t('editor.properties.size')} (H)</Label>
-                  <Input
-                    className="msp-h-7 msp-text-xs"
-                    type="number"
-                    value={editableElement?.style.height || ''}
-                    onChange={(e) => handleResponsiveStyleChange('height', Number(e.target.value))}
-                    placeholder="Auto"
-                  />
-                </div>
-              </div>
-
-              <div className="msp-space-y-1">
-                <Label className="msp-text-xs">Döndürme (°)</Label>
-                <Input
-                  className="msp-h-7 msp-text-xs"
-                  type="number"
-                  min={0}
-                  max={360}
-                  value={editableElement?.rotation ?? 0}
-                  onChange={(e) => updateElementForMode(activeElement.id, { rotation: ((Number(e.target.value) % 360) + 360) % 360 }, propertyMode)}
-                />
-              </div>
-
-              {/* Object Fit Control for Images */}
-              {activeElement.type === 'image' && (
-                <div className="msp-space-y-1">
-                  <Label className="msp-text-xs">{t('editor.properties.imageFit')}</Label>
-                  <Select
-                    value={editableElement?.style.objectFit || 'cover'}
-                    onValueChange={(val) => handleResponsiveStyleChange('objectFit', val)}
-                  >
-                    <SelectTrigger className="msp-h-7 msp-text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cover">{t('editor.properties.fitCover')}</SelectItem>
-                      <SelectItem value="contain">{t('editor.properties.fitContain')}</SelectItem>
-                      <SelectItem value="fill">{t('editor.properties.fitFill')}</SelectItem>
-                      <SelectItem value="none">{t('editor.properties.fitNone')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              <div className="msp-space-y-1">
-                <Label className="msp-text-xs">{t('editor.properties.opacity')} ({activeElementOpacity})</Label>
-                <Slider
-                  value={[activeElementOpacity]}
-                  max={1}
-                  step={0.1}
-                  onValueChange={([val]) => handleResponsiveStyleChange('opacity', val)}
-                />
-              </div>
-
-              <div className="msp-space-y-1">
-                <Label className="msp-text-xs">{t('editor.properties.backgroundColor')}</Label>
-                <ColorPicker
-                  value={String(editableElement?.style.backgroundColor || '')}
-                  onChange={(color) => handleResponsiveStyleChange('backgroundColor', color)}
-                />
-              </div>
-
-              <div className="msp-space-y-1">
-                <ColorPicker
-                  label={t('editor.properties.textColor')}
-                  value={String(editableElement?.style.color || '')}
-                  onChange={(color) => handleResponsiveStyleChange('color', color)}
-                />
-              </div>
-
-              <div className="msp-grid msp-grid-cols-2 msp-gap-3">
                 <div className="msp-space-y-1">
                   <Label className="msp-text-xs">{t('editor.properties.fontSize')}</Label>
                   <Select
@@ -330,105 +319,114 @@ const PropertiesPanel = () => {
                     </SelectContent>
                   </Select>
                 </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="color">
+              <AccordionTrigger className={accordionTriggerClass}>{t('editor.properties.colorTitle')}</AccordionTrigger>
+              <AccordionContent className={`${accordionBodyClass} msp-space-y-3`}>
+                {editableElement ? (
+                  <ColorAndBorderControls
+                    elementId={activeElement.id}
+                    editableElement={editableElement}
+                    propertyMode={propertyMode}
+                  />
+                ) : null}
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Spacing Section */}
+            <AccordionItem value="spacing">
+              <AccordionTrigger className={accordionTriggerClass}>{t('editor.properties.spacingTitle')}</AccordionTrigger>
+              <AccordionContent className={accordionBodyClass}>
+                {editableElement ? (
+                  <SpacingControls
+                    elementId={activeElement.id}
+                    editableElement={editableElement}
+                    propertyMode={propertyMode}
+                  />
+                ) : null}
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Content Section */}
+            <AccordionItem value="content">
+              <AccordionTrigger className={accordionTriggerClass}>{t('editor.properties.content')}</AccordionTrigger>
+              <AccordionContent className={`${accordionBodyClass} msp-space-y-3`}>
+                <AlignmentControls elementId={activeElement.id} propertyMode={propertyMode} />
+
                 <div className="msp-space-y-1">
-                  <Label className="msp-text-xs">{t('editor.properties.borderRadius')}</Label>
+                  <Label className="msp-text-xs">{t('editor.properties.content')}</Label>
+                  <Input
+                    className="msp-h-7 msp-text-xs"
+                    value={activeElement.content}
+                    onChange={(e) => updateElement(activeElement.id, { content: e.target.value })}
+                  />
+                </div>
+                {activeElement.type === 'text' || activeElement.type === 'button' ? (
+                  <div className="msp-space-y-1">
+                    <Label className="msp-text-xs">{t('editor.properties.textAlign')}</Label>
+                    <Select
+                      value={editableElement?.style.textAlign || 'left'}
+                      onValueChange={(val) => handleResponsiveStyleChange('textAlign', val)}
+                    >
+                      <SelectTrigger className="msp-h-7 msp-text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="left">{t('editor.properties.alignLeft')}</SelectItem>
+                        <SelectItem value="center">{t('editor.properties.alignCenter')}</SelectItem>
+                        <SelectItem value="right">{t('editor.properties.alignRight')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Animation Section */}
+            <AccordionItem value="animation">
+              <AccordionTrigger className={accordionTriggerClass}>{t('editor.properties.animation')}</AccordionTrigger>
+              <AccordionContent className={`${accordionBodyClass} msp-space-y-3`}>
+                <div className="msp-space-y-1">
+                  <Label className="msp-text-xs">{t('editor.properties.entranceAnimation')}</Label>
                   <Select
-                    value={String(editableElement?.style.borderRadius || 0)}
-                    onValueChange={(val) => handleResponsiveStyleChange('borderRadius', Number(val))}
+                    value={activeElement.animation?.name || 'None'}
+                    onValueChange={(name) => {
+                      const presetKey = Object.keys(ANIMATION_PRESETS).find(
+                        key => ANIMATION_PRESETS[key].name === name
+                      );
+                      if (presetKey) {
+                        updateElement(activeElement.id, {
+                          animation: ANIMATION_PRESETS[presetKey]
+                        });
+                      }
+                    }}
                   >
                     <SelectTrigger className="msp-h-7 msp-text-xs">
-                      <SelectValue />
+                      <SelectValue placeholder="Animasyon seç" />
                     </SelectTrigger>
                     <SelectContent>
-                      {BORDER_RADII.map(radius => (
-                        <SelectItem key={radius} value={String(radius)}>
-                          {radius === 9999 ? 'Circle' : `${radius}px`}
+                      {Object.values(ANIMATION_PRESETS).map((preset) => (
+                        <SelectItem key={preset.name} value={preset.name}>
+                          {preset.name}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-            </AccordionContent>
-          </AccordionItem>
 
-          {/* Content Section */}
-          <AccordionItem value="content">
-            <AccordionTrigger className="msp-px-3 msp-py-2 msp-text-xs hover:msp-no-underline hover:msp-bg-muted/50">{t('editor.properties.content')}</AccordionTrigger>
-            <AccordionContent className="msp-px-3 msp-py-2 msp-space-y-3">
-              <AlignmentControls elementId={activeElement.id} propertyMode={propertyMode} />
+                {activeElement.animation && activeElement.animation.name !== 'None' && (
+                  <div className="msp-p-2 msp-bg-secondary/50 msp-rounded-md msp-text-xs">
+                    <p>Animasyon: {activeElement.animation.name}</p>
+                    <p className="msp-text-muted-foreground msp-mt-1">Önizle butonuna bas.</p>
+                  </div>
+                )}
+              </AccordionContent>
+            </AccordionItem>
 
-              <div className="msp-space-y-1">
-                <Label className="msp-text-xs">{t('editor.properties.content')}</Label>
-                <Input
-                  className="msp-h-7 msp-text-xs"
-                  value={activeElement.content}
-                  onChange={(e) => updateElement(activeElement.id, { content: e.target.value })}
-                />
-              </div>
-              {activeElement.type === 'text' || activeElement.type === 'button' ? (
-                <div className="msp-space-y-1">
-                  <Label className="msp-text-xs">{t('editor.properties.textAlign')}</Label>
-                  <Select
-                    value={editableElement?.style.textAlign || 'left'}
-                    onValueChange={(val) => handleResponsiveStyleChange('textAlign', val)}
-                  >
-                    <SelectTrigger className="msp-h-7 msp-text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="left">{t('editor.properties.alignLeft')}</SelectItem>
-                      <SelectItem value="center">{t('editor.properties.alignCenter')}</SelectItem>
-                      <SelectItem value="right">{t('editor.properties.alignRight')}</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              ) : null}
-            </AccordionContent>
-          </AccordionItem>
-
-          {/* Animation Section */}
-          <AccordionItem value="animation">
-            <AccordionTrigger className="msp-px-3 msp-py-2 msp-text-xs hover:msp-no-underline hover:msp-bg-muted/50">{t('editor.properties.animation')}</AccordionTrigger>
-            <AccordionContent className="msp-px-3 msp-py-2 msp-space-y-3">
-              <div className="msp-space-y-1">
-                <Label className="msp-text-xs">{t('editor.properties.entranceAnimation')}</Label>
-                <Select
-                  value={activeElement.animation?.name || 'None'}
-                  onValueChange={(name) => {
-                    const presetKey = Object.keys(ANIMATION_PRESETS).find(
-                      key => ANIMATION_PRESETS[key].name === name
-                    );
-                    if (presetKey) {
-                      updateElement(activeElement.id, {
-                        animation: ANIMATION_PRESETS[presetKey]
-                      });
-                    }
-                  }}
-                >
-                  <SelectTrigger className="msp-h-7 msp-text-xs">
-                    <SelectValue placeholder="Animasyon seç" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(ANIMATION_PRESETS).map((preset) => (
-                      <SelectItem key={preset.name} value={preset.name}>
-                        {preset.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {activeElement.animation && activeElement.animation.name !== 'None' && (
-                <div className="msp-p-2 msp-bg-secondary/50 msp-rounded-md msp-text-xs">
-                  <p>Animasyon: {activeElement.animation.name}</p>
-                  <p className="msp-text-muted-foreground msp-mt-1">Önizle butonuna bas.</p>
-                </div>
-              )}
-            </AccordionContent>
-          </AccordionItem>
-
-        </Accordion>
+          </Accordion>
+        </div>
       </div>
     </div>
   );

@@ -80,7 +80,7 @@ const AlignmentControls = ({ elementId, propertyMode }: AlignmentControlsProps) 
   };
 
   return (
-    <div className="msp-space-y-2 msp-pt-1 msp-border-t">
+    <div className="msp-space-y-2 msp-pt-1">
       <Label className="msp-text-xs msp-font-semibold">{t('editor.properties.alignment')}</Label>
 
       <Tabs

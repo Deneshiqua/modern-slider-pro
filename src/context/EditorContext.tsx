@@ -1,5 +1,5 @@
 import { CanvasSettings, EditorElement, EditorState, ElementType, ResponsivePropertyMode, Slide, SliderSettings, ViewMode } from '@/types/editor';
-import React, { ReactNode, createContext, useContext, useMemo, useState } from 'react';
+import React, { ReactNode, createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   CANVAS_ZOOM_DEFAULT,
@@ -11,6 +11,7 @@ import {
 } from '@/lib/constants';
 import { DEMO_SLIDES } from '@/lib/demoSlides';
 import { getSlideSpaceOuterRect } from '@/lib/groupBounds';
+import { elementSubtreeContainsSlide } from '@/lib/elementSubtree';
 import { mergeResponsiveElementUpdates, resolveElementProperties } from '@/lib/responsive';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -30,7 +31,11 @@ interface EditorContextType extends EditorState {
   addElement: (type: ElementType, options?: { content?: string }) => void;
   updateElement: (id: string, updates: Partial<EditorElement>) => void;
   updateElementForMode: (id: string, updates: Partial<EditorElement>, mode?: ResponsivePropertyMode) => void;
-  updateElementsForMode: (updatesById: Record<string, Partial<EditorElement>>, mode?: ResponsivePropertyMode) => void;
+  updateElementsForMode: (
+    updatesById: Record<string, Partial<EditorElement>>,
+    mode?: ResponsivePropertyMode,
+    options?: { skipHistory?: boolean },
+  ) => void;
   removeElement: (id: string) => void;
   removeSelectedElements: () => void;
   selectElement: (id: string | null) => void;
@@ -38,6 +43,8 @@ interface EditorContextType extends EditorState {
   selectElements: (ids: string[]) => void;
   toggleElementSelection: (id: string) => void;
   clearSelection: () => void;
+  /** Ctrl+A / ⌘A: select every root-layer element on the active slide (matches layer panel roots). */
+  selectAllRootElements: () => void;
   setViewMode: (mode: ViewMode) => void;
   propertyMode: ResponsivePropertyMode;
   setPropertyMode: (mode: ResponsivePropertyMode) => void;
@@ -48,6 +55,11 @@ interface EditorContextType extends EditorState {
   bringForward: (id: string) => void;
   sendBackward: (id: string) => void;
   reorderElements: (elementIds: string[]) => void;
+  /** When set, the layers panel lists only direct children of this element (nested group drill-through). */
+  layersDrillParentId: string | null;
+  enterLayersDrill: (parentElementId: string) => void;
+  exitLayersDrill: () => void;
+  reorderGroupChildren: (parentElementId: string, orderedChildIds: string[]) => void;
   groupSelectedElements: () => void;
   ungroupElement: (id: string) => void;
   showBorders: boolean;
@@ -62,6 +74,9 @@ interface EditorContextType extends EditorState {
   zoomCanvasIn: () => void;
   zoomCanvasOut: () => void;
   resetCanvasZoom: () => void;
+  copySelectionToClipboard: () => number;
+  cutSelectionToClipboard: () => number;
+  pasteClipboardElements: () => number;
 }
 
 const EditorContext = createContext<EditorContextType | undefined>(undefined);
@@ -69,6 +84,57 @@ const EditorContext = createContext<EditorContextType | undefined>(undefined);
 type EditorSnapshot = Pick<EditorContextType, 'slides' | 'settings' | 'canvasSettings'>;
 
 const HISTORY_LIMIT = 50;
+
+const findAncestorChain = (elements: EditorElement[], targetId: string): EditorElement[] | null => {
+  for (const el of elements) {
+    if (el.id === targetId) return [el];
+    if (el.children?.length) {
+      const nested = findAncestorChain(el.children, targetId);
+      if (nested) return [el, ...nested];
+    }
+  }
+  return null;
+};
+
+/** When multi-select spans a parent + child, paste only ancestors (full subtrees once). */
+const pruneToNonDescendantIds = (selectedIds: string[], slideElements: EditorElement[]): string[] => {
+  const uniq = [...new Set(selectedIds.filter(Boolean))];
+  return uniq.filter((id) => {
+    const chain = findAncestorChain(slideElements, id);
+    if (!chain?.length) return false;
+    const ancestors = chain.slice(0, -1);
+    return !ancestors.some((a) => uniq.includes(a.id));
+  });
+};
+
+/** Drill stays active while every selected id is the drill root or inside its subtree. */
+const selectionFitsLayersDrill = (
+  drillParentId: string,
+  slideRoots: EditorElement[],
+  selectedIds: string[],
+): boolean =>
+  selectedIds.length > 0 &&
+  selectedIds.every((sid) => elementSubtreeContainsSlide(slideRoots, drillParentId, sid));
+
+const cloneSubtreeWithNewIds = (el: EditorElement): EditorElement => ({
+  ...el,
+  id: uuidv4(),
+  style: { ...el.style },
+  hoverStyle: el.hoverStyle ? { ...el.hoverStyle } : undefined,
+  responsive: el.responsive ? structuredClone(el.responsive) : undefined,
+  animation: el.animation ? { ...el.animation } : undefined,
+  children: el.children?.map(cloneSubtreeWithNewIds),
+});
+
+/** Deep copy preserving ids (stored in-memory clipboard until paste assigns new ids). */
+const freezeElementSubtree = (el: EditorElement): EditorElement => ({
+  ...el,
+  style: { ...el.style },
+  hoverStyle: el.hoverStyle ? { ...el.hoverStyle } : undefined,
+  responsive: el.responsive ? structuredClone(el.responsive) : undefined,
+  animation: el.animation ? { ...el.animation } : undefined,
+  children: el.children?.map(freezeElementSubtree),
+});
 
 // Helper to ensure new slide structure
 const createNewSlide = (): Slide => ({
@@ -107,6 +173,7 @@ export const EditorProvider = ({
   const [canvasSettings, setCanvasSettings] = useState<CanvasSettings>(initialCanvasSettings);
   const [snapGuides, setSnapGuides] = useState<{ x: number[]; y: number[] }>({ x: [], y: [] });
   const [canvasZoom, setCanvasZoomState] = useState(CANVAS_ZOOM_DEFAULT);
+  const [layersDrillParentId, setLayersDrillParentId] = useState<string | null>(null);
 
   const clampCanvasZoom = (zoom: number) =>
     Math.min(CANVAS_ZOOM_MAX, Math.max(CANVAS_ZOOM_MIN, Math.round(zoom * 100) / 100));
@@ -130,6 +197,9 @@ export const EditorProvider = ({
   const [pastSnapshots, setPastSnapshots] = useState<EditorSnapshot[]>([]);
   const [futureSnapshots, setFutureSnapshots] = useState<EditorSnapshot[]>([]);
 
+  /** In-session clipboard for Ctrl+C / Ctrl+X / Ctrl+V (full element subtrees). */
+  const elementClipboardRef = useRef<EditorElement[] | null>(null);
+
   const markDirty = () => setIsDirty(true);
   const markSaved = () => setIsDirty(false);
   const createSnapshot = (): EditorSnapshot => ({ slides, settings, canvasSettings });
@@ -139,31 +209,60 @@ export const EditorProvider = ({
     markDirty();
   };
 
+  const navigateToSlide = (indexOrUpdater: number | ((previous: number) => number)) => {
+    setLayersDrillParentId(null);
+    setCurrentSlideIndex(indexOrUpdater);
+  };
+
   const restoreSnapshot = (snapshot: EditorSnapshot) => {
     setSlides(snapshot.slides);
     setSettings(snapshot.settings);
     setCanvasSettings(snapshot.canvasSettings);
-    setCurrentSlideIndex(index => Math.min(index, Math.max(snapshot.slides.length - 1, 0)));
+    navigateToSlide((index) => Math.min(index, Math.max(snapshot.slides.length - 1, 0)));
     setSelectedElementId(null);
     setSelectedElementIds([]);
   };
 
   const selectElement = (id: string | null) => {
+    const slide = slides[currentSlideIndex];
+    const roots = slide?.elements ?? [];
+
+    setLayersDrillParentId((drill) => {
+      if (!drill) return null;
+      if (id === null) return null;
+      return selectionFitsLayersDrill(drill, roots, [id]) ? drill : null;
+    });
+
     setSelectedElementId(id);
     setSelectedElementIds(id ? [id] : []);
   };
 
   const selectElements = (ids: string[]) => {
     const uniqueIds = [...new Set(ids)];
+    const slide = slides[currentSlideIndex];
+    const roots = slide?.elements ?? [];
+
+    setLayersDrillParentId((drill) => {
+      if (!drill) return null;
+      return selectionFitsLayersDrill(drill, roots, uniqueIds) ? drill : null;
+    });
+
     setSelectedElementIds(uniqueIds);
     setSelectedElementId(uniqueIds.length === 1 ? uniqueIds[0] : null);
   };
 
   const toggleElementSelection = (id: string) => {
-    setSelectedElementIds(prev => {
+    setSelectedElementIds((prev) => {
       const nextIds = prev.includes(id)
-        ? prev.filter(selectedId => selectedId !== id)
+        ? prev.filter((selectedId) => selectedId !== id)
         : [...prev, id];
+
+      const slide = slides[currentSlideIndex];
+      const roots = slide?.elements ?? [];
+      setLayersDrillParentId((drill) => {
+        if (!drill) return null;
+        return selectionFitsLayersDrill(drill, roots, nextIds) ? drill : null;
+      });
 
       setSelectedElementId(nextIds.length === 1 ? nextIds[0] : null);
 
@@ -172,8 +271,18 @@ export const EditorProvider = ({
   };
 
   const clearSelection = () => {
+    setLayersDrillParentId(null);
     setSelectedElementId(null);
     setSelectedElementIds([]);
+  };
+
+  const selectAllRootElements = () => {
+    const slide = slides[currentSlideIndex];
+    if (!slide?.elements?.length) {
+      clearSelection();
+      return;
+    }
+    selectElements(slide.elements.map((element) => element.id));
   };
 
   const undo = () => {
@@ -210,7 +319,7 @@ export const EditorProvider = ({
     const newSlide = createNewSlide();
     recordChange();
     setSlides([...slides, newSlide]);
-    setCurrentSlideIndex(slides.length);
+    navigateToSlide(slides.length);
   };
 
   const removeSlide = (id: string) => {
@@ -219,7 +328,7 @@ export const EditorProvider = ({
     recordChange();
     setSlides(newSlides);
     if (currentSlideIndex >= newSlides.length) {
-      setCurrentSlideIndex(newSlides.length - 1);
+      navigateToSlide(newSlides.length - 1);
     }
   };
 
@@ -234,6 +343,13 @@ export const EditorProvider = ({
     }
     return null;
   };
+
+  useEffect(() => {
+    if (!layersDrillParentId) return;
+    const slide = slides[currentSlideIndex];
+    const node = slide ? findElementById(slide.elements, layersDrillParentId) : null;
+    if (!node?.children?.length) setLayersDrillParentId(null);
+  }, [slides, currentSlideIndex, layersDrillParentId]);
 
   const addElement = (type: ElementType, options?: { content?: string }) => {
     const newElement: EditorElement = {
@@ -311,6 +427,7 @@ export const EditorProvider = ({
   const updateElementsForMode = (
     updatesById: Record<string, Partial<EditorElement>>,
     mode: ResponsivePropertyMode = 'default',
+    options?: { skipHistory?: boolean },
   ) => {
     const updateIds = new Set(Object.keys(updatesById));
     if (updateIds.size === 0) return;
@@ -346,7 +463,9 @@ export const EditorProvider = ({
       elements: updateRecursive(currentSlide.elements)
     };
 
-    recordChange();
+    if (!options?.skipHistory) {
+      recordChange();
+    }
     setSlides(updatedSlides);
   };
 
@@ -408,6 +527,58 @@ export const EditorProvider = ({
     recordChange();
     setSlides(updatedSlides);
     clearSelection();
+  };
+
+  const copySelectionToClipboard = (): number => {
+    const activeIds =
+      selectedElementIds.length > 0 ? selectedElementIds : selectedElementId ? [selectedElementId] : [];
+    const slide = slides[currentSlideIndex];
+    const rootIds = pruneToNonDescendantIds(activeIds, slide.elements);
+
+    const nodes = rootIds
+      .map((id) => findElementById(slide.elements, id))
+      .filter((n): n is EditorElement => n != null);
+
+    if (nodes.length === 0) return 0;
+    elementClipboardRef.current = nodes.map(freezeElementSubtree);
+    return nodes.length;
+  };
+
+  const cutSelectionToClipboard = (): number => {
+    const n = copySelectionToClipboard();
+    if (n === 0) return 0;
+    removeSelectedElements();
+    return n;
+  };
+
+  const pasteClipboardElements = (): number => {
+    const source = elementClipboardRef.current;
+    if (!source?.length) return 0;
+
+    const updatedSlides = [...slides];
+    const slide = updatedSlides[currentSlideIndex];
+
+    let maxZ = slide.elements.reduce((m, el) => Math.max(m, Number(el.style?.zIndex) || 0), 0);
+
+    const pasteOffset = 12;
+    const newRoots = source.map((el) => {
+      const fresh = cloneSubtreeWithNewIds(el);
+      fresh.x = (fresh.x ?? 0) + pasteOffset;
+      fresh.y = (fresh.y ?? 0) + pasteOffset;
+      maxZ += 1;
+      fresh.style = { ...fresh.style, zIndex: maxZ };
+      return fresh;
+    });
+
+    updatedSlides[currentSlideIndex] = {
+      ...slide,
+      elements: [...slide.elements, ...newRoots],
+    };
+
+    recordChange();
+    setSlides(updatedSlides);
+    selectElements(newRoots.map((r) => r.id));
+    return newRoots.length;
   };
 
   const updateSlideBackground = (value: string, type: 'color' | 'image' | 'video') => {
@@ -559,6 +730,45 @@ export const EditorProvider = ({
     setSlides(updatedSlides);
   };
 
+  const reorderGroupChildren = (parentElementId: string, orderedChildIds: string[]) => {
+    const updatedSlides = [...slides];
+    const currentSlide = updatedSlides[currentSlideIndex];
+
+    const applyReorder = (elements: EditorElement[]): EditorElement[] =>
+      elements.map((el) => {
+        if (el.id === parentElementId && el.children?.length) {
+          const children = el.children.map((c) => ({ ...c, style: { ...c.style } }));
+          const total = orderedChildIds.length;
+          orderedChildIds.forEach((cid, index) => {
+            const match = children.find((c) => c.id === cid);
+            if (match) match.style.zIndex = total - index;
+          });
+          return { ...el, children };
+        }
+        if (el.children?.length) {
+          return { ...el, children: applyReorder(el.children) };
+        }
+        return el;
+      });
+
+    updatedSlides[currentSlideIndex] = {
+      ...currentSlide,
+      elements: applyReorder(currentSlide.elements),
+    };
+
+    recordChange();
+    setSlides(updatedSlides);
+  };
+
+  const enterLayersDrill = (parentElementId: string) => {
+    const slide = slides[currentSlideIndex];
+    const parentEl = slide ? findElementById(slide.elements, parentElementId) : null;
+    if (!parentEl?.children?.length) return;
+    setLayersDrillParentId(parentElementId);
+  };
+
+  const exitLayersDrill = () => setLayersDrillParentId(null);
+
   const groupSelectedElements = () => {
     if (selectedElementIds.length < 2) return;
 
@@ -654,7 +864,7 @@ export const EditorProvider = ({
   const loadSlides = (newSlides: Slide[]) => {
     recordChange();
     setSlides(newSlides);
-    setCurrentSlideIndex(0);
+    navigateToSlide(0);
     clearSelection();
   };
 
@@ -676,7 +886,7 @@ export const EditorProvider = ({
     isPlaying,
     addSlide,
     removeSlide,
-    setCurrentSlide: setCurrentSlideIndex,
+    setCurrentSlide: navigateToSlide,
     addElement,
     updateElement,
     updateElementForMode,
@@ -687,6 +897,7 @@ export const EditorProvider = ({
     selectElements,
     toggleElementSelection,
     clearSelection,
+    selectAllRootElements,
     setViewMode,
     propertyMode,
     setPropertyMode,
@@ -697,6 +908,10 @@ export const EditorProvider = ({
     bringForward,
     sendBackward,
     reorderElements,
+    layersDrillParentId,
+    enterLayersDrill,
+    exitLayersDrill,
+    reorderGroupChildren,
     groupSelectedElements,
     ungroupElement,
     showBorders,
@@ -711,12 +926,16 @@ export const EditorProvider = ({
     zoomCanvasIn,
     zoomCanvasOut,
     resetCanvasZoom,
+    copySelectionToClipboard,
+    cutSelectionToClipboard,
+    pasteClipboardElements,
   }), [
     slides,
     settings,
     currentSlideIndex,
     selectedElementId,
     selectedElementIds,
+    layersDrillParentId,
     viewMode,
     propertyMode,
     isPlaying,
@@ -773,6 +992,7 @@ export const useEditor = () => {
       selectElements: () => { },
       toggleElementSelection: () => { },
       clearSelection: () => { },
+      selectAllRootElements: () => { },
       setViewMode: () => { },
       propertyMode: 'default',
       setPropertyMode: () => { },
@@ -783,6 +1003,10 @@ export const useEditor = () => {
       bringForward: () => { },
       sendBackward: () => { },
       reorderElements: () => { },
+      layersDrillParentId: null,
+      enterLayersDrill: () => { },
+      exitLayersDrill: () => { },
+      reorderGroupChildren: () => { },
       groupSelectedElements: () => { },
       ungroupElement: () => { },
       setShowBorders: () => { },
@@ -794,6 +1018,9 @@ export const useEditor = () => {
       zoomCanvasIn: () => { },
       zoomCanvasOut: () => { },
       resetCanvasZoom: () => { },
+      copySelectionToClipboard: () => 0,
+      cutSelectionToClipboard: () => 0,
+      pasteClipboardElements: () => 0,
     } as EditorContextType;
   }
   return context;

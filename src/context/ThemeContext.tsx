@@ -17,6 +17,11 @@ export type ThemeProviderProps = {
   onThemeChange?: (theme: Theme) => void;
   storageKey?: string;
   useSystemTheme?: boolean;
+  /**
+   * When true, sets `dark` and `color-scheme` on `document.documentElement` so Radix portals
+   * (dialogs, menus, selects) use the same palette as the themed editor shell.
+   */
+  attachThemeClassToHtml?: boolean;
 };
 
 const getInitialTheme = (defaultTheme: Theme, storageKey?: string, useSystemTheme?: boolean): Theme => {
@@ -43,6 +48,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   onThemeChange,
   storageKey,
   useSystemTheme = false,
+  attachThemeClassToHtml = false,
 }) => {
   const [uncontrolledTheme, setUncontrolledTheme] = useState<Theme>(() => getInitialTheme(defaultTheme, storageKey, useSystemTheme));
   const [localThemeOverride, setLocalThemeOverride] = useState<Theme | undefined>();
@@ -51,6 +57,19 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   useEffect(() => {
     setLocalThemeOverride(undefined);
   }, [controlledTheme]);
+
+  useEffect(() => {
+    if (!attachThemeClassToHtml || globalThis.window === undefined) return undefined;
+
+    const root = globalThis.window.document.documentElement;
+    root.classList.toggle('dark', theme === 'dark');
+    root.style.colorScheme = theme === 'dark' ? 'dark' : 'light';
+
+    return () => {
+      root.classList.remove('dark');
+      root.style.removeProperty('color-scheme');
+    };
+  }, [attachThemeClassToHtml, theme]);
 
   useEffect(() => {
     if (globalThis.window === undefined || !storageKey) return;

@@ -40,6 +40,7 @@ export type {
     CanvasSettings,
     AnimationConfig,
     ViewMode,
+    ElementHoverColors,
 } from './types/editor';
 export type { Language } from './lib/translations';
 export {
