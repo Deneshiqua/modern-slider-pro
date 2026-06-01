@@ -1,48 +1,23 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
 import {
-  AlignmentAnchor,
   AlignmentReference,
   canUseAlignmentReference,
   computeAlignedLocalPosition,
+  computeCanvasRefinedLocalPosition,
   findElementInTree,
+  guessClosestAlignmentAnchor,
 } from '@/lib/alignment';
+import { readSlideElementLogicalBox } from '@/lib/slideElementDomBox';
+import type { AlignmentAnchor } from '@/lib/alignment';
+import { cn } from '@/lib/utils';
 import { useEditor } from '@/context/EditorContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { ResponsivePropertyMode } from '@/types/editor';
-
-const ALIGNMENT_GRID: AlignmentAnchor[] = [
-  'top-left',
-  'top-center',
-  'top-right',
-  'middle-left',
-  'middle-center',
-  'middle-right',
-  'bottom-left',
-  'bottom-center',
-  'bottom-right',
-];
-
-const ANCHOR_DOT_CLASS: Record<AlignmentAnchor, string> = {
-  'top-left': 'msp-left-0.5 msp-top-0.5',
-  'top-center': 'msp-left-1/2 -msp-translate-x-1/2 msp-top-0.5',
-  'top-right': 'msp-right-0.5 msp-top-0.5',
-  'middle-left': 'msp-left-0.5 msp-top-1/2 -msp-translate-y-1/2',
-  'middle-center': 'msp-left-1/2 msp-top-1/2 -msp-translate-x-1/2 -msp-translate-y-1/2',
-  'middle-right': 'msp-right-0.5 msp-top-1/2 -msp-translate-y-1/2',
-  'bottom-left': 'msp-left-0.5 msp-bottom-0.5',
-  'bottom-center': 'msp-left-1/2 -msp-translate-x-1/2 msp-bottom-0.5',
-  'bottom-right': 'msp-right-0.5 msp-bottom-0.5',
-};
-
-const AlignPositionIcon = ({ anchor }: { anchor: AlignmentAnchor }) => (
-  <span className="msp-relative msp-block msp-h-4 msp-w-4 msp-rounded-sm msp-border msp-border-current">
-    <span className={cn('msp-absolute msp-h-1 msp-w-1 msp-rounded-full msp-bg-current', ANCHOR_DOT_CLASS[anchor])} />
-  </span>
-);
+import { AlignPositionIcon } from './AlignPositionIcon';
+import { ALIGNMENT_GRID } from './alignmentAnchorGrid';
 
 type AlignmentControlsProps = {
   elementId: string;
@@ -51,20 +26,52 @@ type AlignmentControlsProps = {
 
 const AlignmentControls = ({ elementId, propertyMode }: AlignmentControlsProps) => {
   const { t } = useLanguage();
-  const { slides, currentSlideIndex, viewMode, canvasSettings, updateElementForMode } = useEditor();
+  const { slides, currentSlideIndex, viewMode, canvasSettings, updateElementForMode, canvasZoom } = useEditor();
   const slideElements = slides[currentSlideIndex]?.elements ?? [];
 
   const [reference, setReference] = useState<AlignmentReference>('canvas');
 
   const match = findElementInTree(slideElements, elementId);
-  if (!match) return null;
 
   const references: AlignmentReference[] = ['element', 'group', 'canvas'];
-  const activeReference = canUseAlignmentReference(reference, elementId, slideElements)
-    ? reference
-    : references.find((ref) => canUseAlignmentReference(ref, elementId, slideElements)) ?? 'canvas';
+  const activeReference =
+    match && canUseAlignmentReference(reference, elementId, slideElements)
+      ? reference
+      : references.find((ref) => canUseAlignmentReference(ref, elementId, slideElements)) ?? 'canvas';
+
+  const guessedAnchor = useMemo(() => {
+    if (!match) return null;
+    return guessClosestAlignmentAnchor(
+      activeReference,
+      match.element,
+      slideElements,
+      viewMode,
+      canvasSettings,
+    );
+  }, [activeReference, match, slideElements, viewMode, canvasSettings]);
+
+  if (!match) return null;
 
   const handleAlign = (anchor: AlignmentAnchor) => {
+    const z = canvasZoom > 0 ? canvasZoom : 1;
+
+    /** Canvas + DOM: tek güncelleme — aksi halde model konumu + rAF ile düzeltme iki kez hareket ettirir. */
+    if (activeReference === 'canvas') {
+      const box = readSlideElementLogicalBox(elementId, z);
+      if (box) {
+        const refined = computeCanvasRefinedLocalPosition(
+          anchor,
+          elementId,
+          slideElements,
+          viewMode,
+          canvasSettings,
+          box,
+        );
+        updateElementForMode(elementId, refined, propertyMode);
+        return;
+      }
+    }
+
     const position = computeAlignedLocalPosition(
       anchor,
       activeReference,
@@ -77,6 +84,24 @@ const AlignmentControls = ({ elementId, propertyMode }: AlignmentControlsProps) 
     if (!position) return;
 
     updateElementForMode(elementId, position, propertyMode);
+
+    if (activeReference !== 'canvas') return;
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const box = readSlideElementLogicalBox(elementId, z);
+        if (!box) return;
+        const refined = computeCanvasRefinedLocalPosition(
+          anchor,
+          elementId,
+          slideElements,
+          viewMode,
+          canvasSettings,
+          box,
+        );
+        updateElementForMode(elementId, refined, propertyMode);
+      });
+    });
   };
 
   return (
@@ -102,14 +127,19 @@ const AlignmentControls = ({ elementId, propertyMode }: AlignmentControlsProps) 
         </TabsList>
       </Tabs>
 
-      <div className="msp-grid msp-grid-cols-3 msp-gap-1 msp-w-[108px]">
+      <div className="msp-grid msp-w-full msp-grid-cols-3 msp-gap-1">
         {ALIGNMENT_GRID.map((anchor) => (
           <Button
             key={anchor}
             type="button"
             variant="outline"
-            size="icon"
-            className="msp-h-8 msp-w-8"
+            size="sm"
+            aria-pressed={guessedAnchor === anchor}
+            className={cn(
+              'msp-h-8 msp-min-h-8 msp-w-full msp-min-w-0 msp-shrink-0 msp-px-0 msp-py-0 msp-flex msp-items-center msp-justify-center [&_svg]:msp-size-4',
+              guessedAnchor === anchor &&
+                'msp-border-primary msp-bg-primary/15 msp-text-primary msp-ring-2 msp-ring-primary/35',
+            )}
             title={t(`editor.properties.alignAnchor.${anchor}`)}
             onClick={() => handleAlign(anchor)}
           >

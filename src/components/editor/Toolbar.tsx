@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Group, LayoutGrid, Monitor, Play, Plus, Redo2, Save, Settings, SlidersHorizontal, Smartphone, Square, Tablet, Terminal, Undo2, Ungroup, Upload } from 'lucide-react';
+import { Group, LayoutGrid, Monitor, Play, Plus, Redo2, RotateCcw, Save, Settings, SlidersHorizontal, Smartphone, Square, Tablet, Terminal, Undo2, Ungroup, Upload } from 'lucide-react';
 import React, { useState } from 'react';
 import {
   Tooltip,
@@ -75,8 +75,10 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
     markSaved,
     canUndo,
     canRedo,
+    canResetSlide,
     undo,
     redo,
+    resetActiveSlide,
     setPropertyMode,
     selectedElementId,
     selectedElementIds,
@@ -172,11 +174,87 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
   };
 
   return (
-    <div className="msp-h-14 msp-border-b msp-bg-card msp-flex msp-items-center msp-justify-between msp-px-4 msp-shrink-0 msp-min-w-0">
-      <div className="msp-flex msp-items-center msp-gap-2">
-        <h1 className="msp-font-bold msp-text-lg msp-mr-4">{t('editor.toolbar.title')}</h1>
+    <div className="msp-relative msp-flex msp-h-14 msp-min-w-0 msp-shrink-0 msp-items-center msp-border-b msp-bg-card msp-px-4">
+      <div className="msp-z-10 msp-flex msp-min-w-0 msp-flex-1 msp-items-center msp-gap-2">
+        <h1 className="msp-mr-2 msp-min-w-0 msp-shrink msp-truncate msp-text-lg msp-font-bold">
+          {t('editor.toolbar.title')}
+        </h1>
 
-        <div className="msp-flex msp-items-center msp-bg-secondary msp-rounded-md msp-p-1">
+        <div className="msp-flex msp-items-center msp-gap-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetActiveSlide}
+                  disabled={!canResetSlide}
+                >
+                  <RotateCcw className="msp-h-4 msp-w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{t('editor.toolbar.resetSlide')}</p>
+                <p className="msp-mt-1 msp-max-w-xs msp-text-xs msp-text-muted-foreground">{t('editor.toolbar.resetSlideHint')}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="sm" onClick={undo} disabled={!canUndo}>
+                  <Undo2 className="msp-h-4 msp-w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('editor.toolbar.undo')}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="sm" onClick={redo} disabled={!canRedo}>
+                  <Redo2 className="msp-h-4 msp-w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>{t('editor.toolbar.redo')}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+
+        <div className="msp-flex msp-items-center msp-gap-1 msp-ml-1">
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="sm" onClick={groupSelectedElements} disabled={!canGroup}>
+                  <Group className="msp-h-4 msp-w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Seçili öğeleri grupla</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => selectedElementId && ungroupElement(selectedElementId)}
+                  disabled={!canUngroup}
+                >
+                  <Ungroup className="msp-h-4 msp-w-4" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Grubu çöz</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
+
+      <div className="msp-pointer-events-none msp-absolute msp-inset-0 msp-flex msp-items-center msp-justify-center">
+        <div className="msp-pointer-events-auto msp-flex msp-items-center msp-rounded-md msp-bg-secondary msp-p-1">
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -231,76 +309,22 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
             </Tooltip>
           </TooltipProvider>
         </div>
-
-        <div className="msp-flex msp-items-center msp-gap-1 msp-ml-2">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={undo} disabled={!canUndo}>
-                  <Undo2 className="msp-h-4 msp-w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('editor.toolbar.undo')}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={redo} disabled={!canRedo}>
-                  <Redo2 className="msp-h-4 msp-w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>{t('editor.toolbar.redo')}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
-
-        <div className="msp-flex msp-items-center msp-gap-1 msp-ml-1">
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" size="sm" onClick={groupSelectedElements} disabled={!canGroup}>
-                  <Group className="msp-h-4 msp-w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Seçili öğeleri grupla</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => selectedElementId && ungroupElement(selectedElementId)}
-                  disabled={!canUngroup}
-                >
-                  <Ungroup className="msp-h-4 msp-w-4" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Grubu çöz</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </div>
       </div>
 
-      <div className="msp-flex msp-items-center msp-gap-2">
+      <div className="msp-z-10 msp-flex msp-min-w-0 msp-flex-1 msp-items-center msp-justify-end msp-gap-2">
         {/* Canvas settings (popover avoids modal overlay/focus trap for embedders) */}
         <Popover modal={false} open={isCanvasSettingsOpen} onOpenChange={setIsCanvasSettingsOpen}>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <LayoutGrid className="msp-h-5 msp-w-5" />
-                  </Button>
-                </PopoverTrigger>
-              </TooltipTrigger>
-              <TooltipContent>Canvas Ayarları</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title={t('editor.toolbar.tooltipCanvasSettings')}
+              aria-label={t('editor.toolbar.tooltipCanvasSettings')}
+            >
+              <LayoutGrid className="msp-h-5 msp-w-5" />
+            </Button>
+          </PopoverTrigger>
           <PopoverContent align="end" className="msp-max-w-sm msp-w-[min(calc(100vw-2rem),24rem)] msp-max-h-[min(32rem,calc(100vh-5rem))] msp-overflow-y-auto msp-p-4">
             <div className="msp-space-y-1.5 msp-border-b msp-pb-3 msp-mb-1">
               <h2 className="msp-text-base msp-font-semibold msp-leading-none">Canvas Ayarları</h2>
@@ -471,23 +495,34 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
                   onCheckedChange={(checked) => updateCanvasSettings({ snapToElements: checked })}
                 />
               </div>
+
+              <div className="msp-flex msp-items-center msp-justify-between">
+                <div>
+                  <Label htmlFor="tb-centerGuides">{t('editor.toolbar.centerGuides')}</Label>
+                  <p className="msp-text-xs msp-text-muted-foreground msp-mt-0.5">{t('editor.toolbar.centerGuidesHint')}</p>
+                </div>
+                <Switch
+                  id="tb-centerGuides"
+                  checked={canvasSettings.showCenterGuides}
+                  onCheckedChange={(checked) => updateCanvasSettings({ showCenterGuides: checked })}
+                />
+              </div>
             </div>
           </PopoverContent>
         </Popover>
 
         <Popover modal={false} open={isSliderSettingsOpen} onOpenChange={setIsSliderSettingsOpen}>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <SlidersHorizontal className="msp-h-5 msp-w-5" />
-                  </Button>
-                </PopoverTrigger>
-              </TooltipTrigger>
-              <TooltipContent>Slider Ayarları</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title={t('editor.toolbar.tooltipSliderSettings')}
+              aria-label={t('editor.toolbar.tooltipSliderSettings')}
+            >
+              <SlidersHorizontal className="msp-h-5 msp-w-5" />
+            </Button>
+          </PopoverTrigger>
           <PopoverContent align="end" className="msp-max-w-sm msp-w-[min(calc(100vw-2rem),24rem)] msp-max-h-[min(28rem,calc(100vh-5rem))] msp-overflow-y-auto msp-p-4">
             <div className="msp-space-y-1.5 msp-border-b msp-pb-3 msp-mb-1">
               <h2 className="msp-text-base msp-font-semibold msp-leading-none">Slider Ayarları</h2>
@@ -547,18 +582,17 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
         </Popover>
 
         <Popover modal={false}>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <PopoverTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <Settings className="msp-h-5 msp-w-5" />
-                  </Button>
-                </PopoverTrigger>
-              </TooltipTrigger>
-              <TooltipContent>{t('settings.title')}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title={t('settings.title')}
+              aria-label={t('settings.title')}
+            >
+              <Settings className="msp-h-5 msp-w-5" />
+            </Button>
+          </PopoverTrigger>
           <PopoverContent align="end" className="msp-max-w-sm msp-w-[min(calc(100vw-2rem),20rem)] msp-p-4">
             <div className="msp-space-y-1.5 msp-border-b msp-pb-3 msp-mb-1">
               <h2 className="msp-text-base msp-font-semibold msp-leading-none">{t('settings.title')}</h2>

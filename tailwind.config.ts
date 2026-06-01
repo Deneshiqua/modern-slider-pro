@@ -87,6 +87,17 @@ export default {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
+      /**
+       * Portals render on `document.body`. Host apps often use z-index in the thousands for
+       * nav/shell/modals; values like z-50 get buried so clicks hit the host layer instead.
+       */
+      zIndex: {
+        "overlay-tooltip": "100010",
+        "overlay-popover": "100100",
+        "overlay-dialog": "100200",
+        "overlay-select": "100300",
+        "overlay-toast": "100400",
+      },
     },
   },
   plugins: [tailwindcssAnimate, tailwindcssAspectRatio],

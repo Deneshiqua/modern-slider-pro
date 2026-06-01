@@ -18,7 +18,7 @@ const DrawerOverlay = React.forwardRef<
   React.ElementRef<typeof DrawerPrimitive.Overlay>,
   React.ComponentPropsWithoutRef<typeof DrawerPrimitive.Overlay>
 >(({ className, ...props }, ref) => (
-  <DrawerPrimitive.Overlay ref={ref} className={cn('msp-fixed msp-inset-0 msp-z-50 msp-bg-black/80', className)} {...props} />
+  <DrawerPrimitive.Overlay ref={ref} className={cn('msp-fixed msp-inset-0 msp-z-overlay-dialog msp-bg-black/80', className)} {...props} />
 ));
 DrawerOverlay.displayName = DrawerPrimitive.Overlay.displayName;
 
@@ -30,7 +30,7 @@ const DrawerContent = React.forwardRef<
     <DrawerOverlay />
     <DrawerPrimitive.Content
       ref={ref}
-      className={cn('msp-fixed msp-inset-x-0 msp-bottom-0 msp-z-50 msp-mt-24 msp-flex msp-h-auto msp-flex-col msp-rounded-t-[10px] msp-border msp-bg-background', className)}
+      className={cn('msp-fixed msp-inset-x-0 msp-bottom-0 msp-z-overlay-dialog msp-mt-24 msp-flex msp-h-auto msp-flex-col msp-rounded-t-[10px] msp-border msp-bg-background', className)}
       {...props}
     >
       <div className="msp-mx-auto msp-mt-4 msp-h-2 msp-w-[100px] msp-rounded-full msp-bg-muted" />

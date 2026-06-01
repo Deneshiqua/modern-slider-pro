@@ -1,4 +1,12 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 export type Theme = 'dark' | 'light';
 
@@ -54,21 +62,43 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   const [localThemeOverride, setLocalThemeOverride] = useState<Theme | undefined>();
   const theme = localThemeOverride ?? controlledTheme ?? uncontrolledTheme;
 
+  /** Snapshot of the host document before we touch `<html>` (e.g. next-themes). Restored on unmount. */
+  const hostHtmlSnapshotRef = useRef<{ hadDark: boolean; colorScheme: string } | null>(null);
+
   useEffect(() => {
     setLocalThemeOverride(undefined);
   }, [controlledTheme]);
 
+  // Capture host theme once while attached; restore on detach so embedders (next-themes) are not left broken.
   useEffect(() => {
     if (!attachThemeClassToHtml || globalThis.window === undefined) return undefined;
 
     const root = globalThis.window.document.documentElement;
-    root.classList.toggle('dark', theme === 'dark');
-    root.style.colorScheme = theme === 'dark' ? 'dark' : 'light';
+    hostHtmlSnapshotRef.current = {
+      hadDark: root.classList.contains('dark'),
+      colorScheme: root.style.colorScheme || '',
+    };
 
     return () => {
-      root.classList.remove('dark');
-      root.style.removeProperty('color-scheme');
+      const snap = hostHtmlSnapshotRef.current;
+      hostHtmlSnapshotRef.current = null;
+      if (!snap || globalThis.window === undefined) return;
+      const r = globalThis.window.document.documentElement;
+      r.classList.toggle('dark', snap.hadDark);
+      if (snap.colorScheme) {
+        r.style.colorScheme = snap.colorScheme;
+      } else {
+        r.style.removeProperty('color-scheme');
+      }
     };
+  }, [attachThemeClassToHtml]);
+
+  useEffect(() => {
+    if (!attachThemeClassToHtml || globalThis.window === undefined) return;
+
+    const root = globalThis.window.document.documentElement;
+    root.classList.toggle('dark', theme === 'dark');
+    root.style.colorScheme = theme === 'dark' ? 'dark' : 'light';
   }, [attachThemeClassToHtml, theme]);
 
   useEffect(() => {

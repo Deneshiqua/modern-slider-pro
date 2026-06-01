@@ -2,6 +2,7 @@ import * as React from 'react';
 import * as DropdownMenuPrimitive from '@radix-ui/react-dropdown-menu';
 import { Check, ChevronRight, Circle } from 'lucide-react';
 
+import { useMspPortalThemeClasses } from '@/hooks/useMspPortalThemeClasses';
 import { cn } from '@/lib/utils';
 
 const DropdownMenu = DropdownMenuPrimitive.Root;
@@ -40,34 +41,44 @@ DropdownMenuSubTrigger.displayName = DropdownMenuPrimitive.SubTrigger.displayNam
 const DropdownMenuSubContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.SubContent>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.SubContent>
->(({ className, ...props }, ref) => (
-  <DropdownMenuPrimitive.SubContent
-    ref={ref}
-    className={cn(
-      'msp-z-50 msp-min-w-[8rem] msp-overflow-hidden msp-rounded-md msp-border msp-bg-popover msp-p-1 msp-text-popover-foreground msp-shadow-lg data-[state=open]:msp-animate-in data-[state=closed]:msp-animate-out data-[state=closed]:msp-fade-out-0 data-[state=open]:msp-fade-in-0 data-[state=closed]:msp-zoom-out-95 data-[state=open]:msp-zoom-in-95 data-[side=bottom]:msp-slide-in-from-top-2 data-[side=left]:msp-slide-in-from-right-2 data-[side=right]:msp-slide-in-from-left-2 data-[side=top]:msp-slide-in-from-bottom-2',
-      className
-    )}
-    {...props}
-  />
-));
+>(({ className, ...props }, ref) => {
+  const portalTheme = useMspPortalThemeClasses();
+
+  return (
+    <DropdownMenuPrimitive.SubContent
+      ref={ref}
+      className={cn(
+        portalTheme,
+        'msp-z-overlay-select msp-min-w-[8rem] msp-overflow-hidden msp-rounded-md msp-border msp-bg-popover msp-p-1 msp-text-popover-foreground msp-shadow-lg data-[state=open]:msp-animate-in data-[state=closed]:msp-animate-out data-[state=closed]:msp-fade-out-0 data-[state=open]:msp-fade-in-0 data-[state=closed]:msp-zoom-out-95 data-[state=open]:msp-zoom-in-95 data-[side=bottom]:msp-slide-in-from-top-2 data-[side=left]:msp-slide-in-from-right-2 data-[side=right]:msp-slide-in-from-left-2 data-[side=top]:msp-slide-in-from-bottom-2',
+        className
+      )}
+      {...props}
+    />
+  );
+});
 DropdownMenuSubContent.displayName = DropdownMenuPrimitive.SubContent.displayName;
 
 const DropdownMenuContent = React.forwardRef<
   React.ElementRef<typeof DropdownMenuPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DropdownMenuPrimitive.Content>
->(({ className, sideOffset = 4, ...props }, ref) => (
-  <DropdownMenuPrimitive.Portal>
-    <DropdownMenuPrimitive.Content
-      ref={ref}
-      sideOffset={sideOffset}
-      className={cn(
-        'msp-z-50 msp-min-w-[8rem] msp-overflow-hidden msp-rounded-md msp-border msp-bg-popover msp-p-1 msp-text-popover-foreground msp-shadow-md data-[state=open]:msp-animate-in data-[state=closed]:msp-animate-out data-[state=closed]:msp-fade-out-0 data-[state=open]:msp-fade-in-0 data-[state=closed]:msp-zoom-out-95 data-[state=open]:msp-zoom-in-95 data-[side=bottom]:msp-slide-in-from-top-2 data-[side=left]:msp-slide-in-from-right-2 data-[side=right]:msp-slide-in-from-left-2 data-[side=top]:msp-slide-in-from-bottom-2',
-        className
-      )}
-      {...props}
-    />
-  </DropdownMenuPrimitive.Portal>
-));
+>(({ className, sideOffset = 4, ...props }, ref) => {
+  const portalTheme = useMspPortalThemeClasses();
+
+  return (
+    <DropdownMenuPrimitive.Portal>
+      <DropdownMenuPrimitive.Content
+        ref={ref}
+        sideOffset={sideOffset}
+        className={cn(
+          portalTheme,
+          'msp-z-overlay-select msp-min-w-[8rem] msp-overflow-hidden msp-rounded-md msp-border msp-bg-popover msp-p-1 msp-text-popover-foreground msp-shadow-md data-[state=open]:msp-animate-in data-[state=closed]:msp-animate-out data-[state=closed]:msp-fade-out-0 data-[state=open]:msp-fade-in-0 data-[state=closed]:msp-zoom-out-95 data-[state=open]:msp-zoom-in-95 data-[side=bottom]:msp-slide-in-from-top-2 data-[side=left]:msp-slide-in-from-right-2 data-[side=right]:msp-slide-in-from-left-2 data-[side=top]:msp-slide-in-from-bottom-2',
+          className
+        )}
+        {...props}
+      />
+    </DropdownMenuPrimitive.Portal>
+  );
+});
 DropdownMenuContent.displayName = DropdownMenuPrimitive.Content.displayName;
 
 const DropdownMenuItem = React.forwardRef<

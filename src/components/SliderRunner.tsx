@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { resolveElementProperties } from '@/lib/responsive';
 import { formatElementHoverStyleTag } from '@/lib/elementHoverCss';
+import { resolveElementPlaybackTransition } from '@/lib/timelineBridge';
 
 interface SliderRunnerProps {
   slides?: Slide[];
@@ -117,7 +118,7 @@ const SliderRunner = ({
                   initial={element.animation?.initial as any}
                   // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   animate={element.animation?.animate as any}
-                  transition={element.animation?.transition}
+                  transition={resolveElementPlaybackTransition(element) ?? element.animation?.transition}
                   style={{
                     position: 'absolute',
                     left: renderedElement.x,
@@ -126,7 +127,11 @@ const SliderRunner = ({
                     ...(renderedElement.rotation ? { transform: `rotate(${renderedElement.rotation}deg)`, transformOrigin: 'msp-center msp-center' } : {}),
                   }}
                 >
-                  {renderedElement.type === 'text' && <p>{renderedElement.content}</p>}
+                  {renderedElement.type === 'text' && (
+                    <p className="msp-m-0 msp-block msp-min-w-0 msp-w-full msp-p-0 msp-whitespace-pre-wrap msp-indent-0">
+                      {renderedElement.content}
+                    </p>
+                  )}
                   {renderedElement.type === 'image' && (
                     <img
                       src={renderedElement.content}

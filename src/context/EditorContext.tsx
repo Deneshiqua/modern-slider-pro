@@ -23,8 +23,11 @@ interface EditorContextType extends EditorState {
   markSaved: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  canResetSlide: boolean;
   undo: () => void;
   redo: () => void;
+  /** Revert the active slide to its state before the first edit in this session (redo can restore). */
+  resetActiveSlide: () => void;
   addSlide: () => void;
   removeSlide: (id: string) => void;
   setCurrentSlide: (index: number) => void;
@@ -50,6 +53,7 @@ interface EditorContextType extends EditorState {
   setPropertyMode: (mode: ResponsivePropertyMode) => void;
   togglePlay: () => void;
   updateSlideBackground: (value: string, type: 'color' | 'image' | 'video') => void;
+  updateSlideTimelineDuration: (durationSeconds: number) => void;
   bringToFront: (id: string) => void;
   sendToBack: (id: string) => void;
   bringForward: (id: string) => void;
@@ -67,8 +71,6 @@ interface EditorContextType extends EditorState {
   loadSlides: (newSlides: Slide[]) => void;
   canvasSettings: CanvasSettings;
   updateCanvasSettings: (settings: Partial<CanvasSettings>) => void;
-  snapGuides: { x: number[]; y: number[] };
-  setSnapGuides: (guides: { x: number[]; y: number[] }) => void;
   canvasZoom: number;
   setCanvasZoom: (zoom: number) => void;
   zoomCanvasIn: () => void;
@@ -84,6 +86,27 @@ const EditorContext = createContext<EditorContextType | undefined>(undefined);
 type EditorSnapshot = Pick<EditorContextType, 'slides' | 'settings' | 'canvasSettings'>;
 
 const HISTORY_LIMIT = 50;
+
+type SlideUndoStacks = Record<string, { past: Slide[]; future: Slide[] }>;
+
+const cloneSlide = (slide: Slide): Slide => structuredClone(slide);
+
+const emptySlideStack = (): { past: Slide[]; future: Slide[] } => ({ past: [], future: [] });
+
+const getSlideStack = (stacks: SlideUndoStacks, slideId: string) =>
+  stacks[slideId] ?? emptySlideStack();
+
+/** Module-scope tree lookup (usable from undo before inner `findElementById`). */
+const findElementInTree = (elements: EditorElement[], id: string): EditorElement | null => {
+  for (const el of elements) {
+    if (el.id === id) return el;
+    if (el.children?.length) {
+      const found = findElementInTree(el.children, id);
+      if (found) return found;
+    }
+  }
+  return null;
+};
 
 const findAncestorChain = (elements: EditorElement[], targetId: string): EditorElement[] | null => {
   for (const el of elements) {
@@ -105,6 +128,13 @@ const pruneToNonDescendantIds = (selectedIds: string[], slideElements: EditorEle
     const ancestors = chain.slice(0, -1);
     return !ancestors.some((a) => uniq.includes(a.id));
   });
+};
+
+/** Keep selection for undo/redo: drop missing ids, prune parent+child pairs. */
+const filterSelectionToSlideTree = (slide: Slide, prevIds: string[], prevSingle: string | null): string[] => {
+  const roots = slide.elements;
+  const raw = prevIds.length > 0 ? prevIds : prevSingle ? [prevSingle] : [];
+  return pruneToNonDescendantIds(raw, roots).filter((id) => findElementInTree(roots, id) != null);
 };
 
 /** Drill stays active while every selected id is the drill root or inside its subtree. */
@@ -171,7 +201,6 @@ export const EditorProvider = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [showBorders, setShowBorders] = useState(false);
   const [canvasSettings, setCanvasSettings] = useState<CanvasSettings>(initialCanvasSettings);
-  const [snapGuides, setSnapGuides] = useState<{ x: number[]; y: number[] }>({ x: [], y: [] });
   const [canvasZoom, setCanvasZoomState] = useState(CANVAS_ZOOM_DEFAULT);
   const [layersDrillParentId, setLayersDrillParentId] = useState<string | null>(null);
 
@@ -194,8 +223,11 @@ export const EditorProvider = ({
     setCanvasZoomState(CANVAS_ZOOM_DEFAULT);
   };
   const [isDirty, setIsDirty] = useState(false);
-  const [pastSnapshots, setPastSnapshots] = useState<EditorSnapshot[]>([]);
-  const [futureSnapshots, setFutureSnapshots] = useState<EditorSnapshot[]>([]);
+  /** Full-project snapshots for settings, canvas, add/remove slide, loadSlides, etc. */
+  const [globalPastSnapshots, setGlobalPastSnapshots] = useState<EditorSnapshot[]>([]);
+  const [globalFutureSnapshots, setGlobalFutureSnapshots] = useState<EditorSnapshot[]>([]);
+  /** Per-slide undo/redo for element + slide background (scoped by slide id). */
+  const [slideUndoStacks, setSlideUndoStacks] = useState<SlideUndoStacks>({});
 
   /** In-session clipboard for Ctrl+C / Ctrl+X / Ctrl+V (full element subtrees). */
   const elementClipboardRef = useRef<EditorElement[] | null>(null);
@@ -203,9 +235,26 @@ export const EditorProvider = ({
   const markDirty = () => setIsDirty(true);
   const markSaved = () => setIsDirty(false);
   const createSnapshot = (): EditorSnapshot => ({ slides, settings, canvasSettings });
-  const recordChange = () => {
-    setPastSnapshots(prev => [...prev.slice(-(HISTORY_LIMIT - 1)), createSnapshot()]);
-    setFutureSnapshots([]);
+
+  const recordSlideScopedChange = (slideId: string) => {
+    const slide = slides.find((s) => s.id === slideId);
+    if (!slide) return;
+    setSlideUndoStacks((prev) => {
+      const cur = getSlideStack(prev, slideId);
+      return {
+        ...prev,
+        [slideId]: {
+          past: [...cur.past.slice(-(HISTORY_LIMIT - 1)), cloneSlide(slide)],
+          future: [],
+        },
+      };
+    });
+    markDirty();
+  };
+
+  const recordGlobalChange = () => {
+    setGlobalPastSnapshots((prev) => [...prev.slice(-(HISTORY_LIMIT - 1)), createSnapshot()]);
+    setGlobalFutureSnapshots([]);
     markDirty();
   };
 
@@ -214,13 +263,32 @@ export const EditorProvider = ({
     setCurrentSlideIndex(indexOrUpdater);
   };
 
-  const restoreSnapshot = (snapshot: EditorSnapshot) => {
+  const applyGlobalSnapshot = (snapshot: EditorSnapshot) => {
+    const prevDrill = layersDrillParentId;
+    const nextIndex = Math.min(currentSlideIndex, Math.max(snapshot.slides.length - 1, 0));
+    const nextSlide = snapshot.slides[nextIndex];
+
     setSlides(snapshot.slides);
     setSettings(snapshot.settings);
     setCanvasSettings(snapshot.canvasSettings);
     navigateToSlide((index) => Math.min(index, Math.max(snapshot.slides.length - 1, 0)));
-    setSelectedElementId(null);
-    setSelectedElementIds([]);
+
+    const nextIds = nextSlide
+      ? filterSelectionToSlideTree(nextSlide, selectedElementIds, selectedElementId)
+      : [];
+    setSelectedElementIds(nextIds);
+    setSelectedElementId(nextIds.length === 1 ? nextIds[0] : null);
+
+    const resolvedDrill =
+      prevDrill &&
+      nextSlide &&
+      nextIds.length > 0 &&
+      selectionFitsLayersDrill(prevDrill, nextSlide.elements, nextIds)
+        ? prevDrill
+        : null;
+    setLayersDrillParentId(resolvedDrill);
+
+    setSlideUndoStacks({});
   };
 
   const selectElement = (id: string | null) => {
@@ -286,38 +354,118 @@ export const EditorProvider = ({
   };
 
   const undo = () => {
-    const previousSnapshot = pastSnapshots[pastSnapshots.length - 1];
+    const sid = slides[currentSlideIndex]?.id;
+    if (sid) {
+      const st = getSlideStack(slideUndoStacks, sid);
+      if (st.past.length > 0) {
+        const previousSlide = st.past[st.past.length - 1];
+        const currentSlide = slides.find((s) => s.id === sid);
+        if (!currentSlide) return;
+        setSlideUndoStacks((prev) => ({
+          ...prev,
+          [sid]: {
+            past: st.past.slice(0, -1),
+            future: [cloneSlide(currentSlide), ...st.future].slice(0, HISTORY_LIMIT),
+          },
+        }));
+        setSlides((prev) => prev.map((s) => (s.id === sid ? cloneSlide(previousSlide) : s)));
+        const nextIds = filterSelectionToSlideTree(previousSlide, selectedElementIds, selectedElementId);
+        setSelectedElementIds(nextIds);
+        setSelectedElementId(nextIds.length === 1 ? nextIds[0] : null);
+        setLayersDrillParentId((drill) => {
+          if (!drill || nextIds.length === 0) return null;
+          return selectionFitsLayersDrill(drill, previousSlide.elements, nextIds) ? drill : null;
+        });
+        markDirty();
+        return;
+      }
+    }
+
+    const previousSnapshot = globalPastSnapshots[globalPastSnapshots.length - 1];
     if (!previousSnapshot) return;
 
-    setPastSnapshots(prev => prev.slice(0, -1));
-    setFutureSnapshots(prev => [createSnapshot(), ...prev].slice(0, HISTORY_LIMIT));
-    restoreSnapshot(previousSnapshot);
+    setGlobalPastSnapshots((prev) => prev.slice(0, -1));
+    setGlobalFutureSnapshots((prev) => [createSnapshot(), ...prev].slice(0, HISTORY_LIMIT));
+    applyGlobalSnapshot(previousSnapshot);
     markDirty();
   };
 
   const redo = () => {
-    const nextSnapshot = futureSnapshots[0];
+    const sid = slides[currentSlideIndex]?.id;
+    if (sid) {
+      const st = getSlideStack(slideUndoStacks, sid);
+      if (st.future.length > 0) {
+        const nextSlide = st.future[0];
+        const currentSlide = slides.find((s) => s.id === sid);
+        if (!currentSlide) return;
+        setSlideUndoStacks((prev) => ({
+          ...prev,
+          [sid]: {
+            past: [...st.past.slice(-(HISTORY_LIMIT - 1)), cloneSlide(currentSlide)],
+            future: st.future.slice(1),
+          },
+        }));
+        setSlides((prev) => prev.map((s) => (s.id === sid ? cloneSlide(nextSlide) : s)));
+        const nextIds = filterSelectionToSlideTree(nextSlide, selectedElementIds, selectedElementId);
+        setSelectedElementIds(nextIds);
+        setSelectedElementId(nextIds.length === 1 ? nextIds[0] : null);
+        setLayersDrillParentId((drill) => {
+          if (!drill || nextIds.length === 0) return null;
+          return selectionFitsLayersDrill(drill, nextSlide.elements, nextIds) ? drill : null;
+        });
+        markDirty();
+        return;
+      }
+    }
+
+    const nextSnapshot = globalFutureSnapshots[0];
     if (!nextSnapshot) return;
 
-    setFutureSnapshots(prev => prev.slice(1));
-    setPastSnapshots(prev => [...prev.slice(-(HISTORY_LIMIT - 1)), createSnapshot()]);
-    restoreSnapshot(nextSnapshot);
+    setGlobalFutureSnapshots((prev) => prev.slice(1));
+    setGlobalPastSnapshots((prev) => [...prev.slice(-(HISTORY_LIMIT - 1)), createSnapshot()]);
+    applyGlobalSnapshot(nextSnapshot);
+    markDirty();
+  };
+
+  const resetActiveSlide = () => {
+    const sid = slides[currentSlideIndex]?.id;
+    if (!sid) return;
+    const st = getSlideStack(slideUndoStacks, sid);
+    if (st.past.length === 0) return;
+    const baseline = cloneSlide(st.past[0]);
+    const currentSlide = slides.find((s) => s.id === sid);
+    if (!currentSlide) return;
+    setSlides((prev) => prev.map((s) => (s.id === sid ? baseline : s)));
+    setSlideUndoStacks((prev) => ({
+      ...prev,
+      [sid]: {
+        past: [],
+        future: [cloneSlide(currentSlide), ...getSlideStack(prev, sid).future].slice(0, HISTORY_LIMIT),
+      },
+    }));
+    const nextIds = filterSelectionToSlideTree(baseline, selectedElementIds, selectedElementId);
+    setSelectedElementIds(nextIds);
+    setSelectedElementId(nextIds.length === 1 ? nextIds[0] : null);
+    setLayersDrillParentId((drill) => {
+      if (!drill || nextIds.length === 0) return null;
+      return selectionFitsLayersDrill(drill, baseline.elements, nextIds) ? drill : null;
+    });
     markDirty();
   };
 
   const updateCanvasSettings = (settings: Partial<CanvasSettings>) => {
-    recordChange();
+    recordGlobalChange();
     setCanvasSettings(prev => ({ ...prev, ...settings }));
   };
 
   const updateSettings = (newSettings: Partial<SliderSettings>) => {
-    recordChange();
+    recordGlobalChange();
     setSettings(prev => ({ ...prev, ...newSettings }));
   };
 
   const addSlide = () => {
     const newSlide = createNewSlide();
-    recordChange();
+    recordGlobalChange();
     setSlides([...slides, newSlide]);
     navigateToSlide(slides.length);
   };
@@ -325,8 +473,13 @@ export const EditorProvider = ({
   const removeSlide = (id: string) => {
     if (slides.length <= 1) return;
     const newSlides = slides.filter(s => s.id !== id);
-    recordChange();
+    recordGlobalChange();
     setSlides(newSlides);
+    setSlideUndoStacks((prev) => {
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
     if (currentSlideIndex >= newSlides.length) {
       navigateToSlide(newSlides.length - 1);
     }
@@ -352,6 +505,9 @@ export const EditorProvider = ({
   }, [slides, currentSlideIndex, layersDrillParentId]);
 
   const addElement = (type: ElementType, options?: { content?: string }) => {
+    const activeSlideId = slides[currentSlideIndex]?.id;
+    if (!activeSlideId) return;
+
     const newElement: EditorElement = {
       id: uuidv4(),
       type,
@@ -405,7 +561,7 @@ export const EditorProvider = ({
           elements: updateChildren(currentSlide.elements)
         };
 
-        recordChange();
+        recordSlideScopedChange(activeSlideId);
         setSlides(updatedSlides);
         selectElement(newElement.id);
         return;
@@ -419,7 +575,7 @@ export const EditorProvider = ({
       elements: [...currentSlide.elements, newElement]
     };
 
-    recordChange();
+    recordSlideScopedChange(activeSlideId);
     setSlides(updatedSlides);
     selectElement(newElement.id);
   };
@@ -464,7 +620,8 @@ export const EditorProvider = ({
     };
 
     if (!options?.skipHistory) {
-      recordChange();
+      const aid = slides[currentSlideIndex]?.id;
+      if (aid) recordSlideScopedChange(aid);
     }
     setSlides(updatedSlides);
   };
@@ -499,7 +656,8 @@ export const EditorProvider = ({
       elements: removeRecursive(currentSlide.elements, new Set([id]))
     };
 
-    recordChange();
+    const aid = slides[currentSlideIndex]?.id;
+    if (aid) recordSlideScopedChange(aid);
     setSlides(updatedSlides);
     clearSelection();
   };
@@ -524,7 +682,8 @@ export const EditorProvider = ({
       elements: removeRecursive(currentSlide.elements),
     };
 
-    recordChange();
+    const aid = slides[currentSlideIndex]?.id;
+    if (aid) recordSlideScopedChange(aid);
     setSlides(updatedSlides);
     clearSelection();
   };
@@ -575,7 +734,8 @@ export const EditorProvider = ({
       elements: [...slide.elements, ...newRoots],
     };
 
-    recordChange();
+    const aid = slides[currentSlideIndex]?.id;
+    if (aid) recordSlideScopedChange(aid);
     setSlides(updatedSlides);
     selectElements(newRoots.map((r) => r.id));
     return newRoots.length;
@@ -597,7 +757,22 @@ export const EditorProvider = ({
     updatedSlide.background = value;
 
     updatedSlides[currentSlideIndex] = updatedSlide;
-    recordChange();
+    const aid = slides[currentSlideIndex]?.id;
+    if (aid) recordSlideScopedChange(aid);
+    setSlides(updatedSlides);
+  };
+
+  const updateSlideTimelineDuration = (durationSeconds: number) => {
+    if (!Number.isFinite(durationSeconds) || durationSeconds < 1) return;
+    const updatedSlides = [...slides];
+    const currentSlide = updatedSlides[currentSlideIndex];
+    if (!currentSlide) return;
+    updatedSlides[currentSlideIndex] = {
+      ...currentSlide,
+      timeline: { duration: durationSeconds },
+    };
+    const aid = currentSlide.id;
+    if (aid) recordSlideScopedChange(aid);
     setSlides(updatedSlides);
   };
 
@@ -624,7 +799,9 @@ export const EditorProvider = ({
       const element = elements[elementIndex];
       const maxZ = elements.length;
       if (Number(element.style.zIndex) === maxZ) return;
-      recordChange();
+      const aid = slides[currentSlideIndex]?.id;
+      if (!aid) return;
+      recordSlideScopedChange(aid);
       element.style.zIndex = maxZ + 1;
       updatedSlides[currentSlideIndex] = {
         ...currentSlide,
@@ -644,7 +821,9 @@ export const EditorProvider = ({
     if (elementIndex !== -1) {
       const element = elements[elementIndex];
       if (Number(element.style.zIndex) === 1) return;
-      recordChange();
+      const aid = slides[currentSlideIndex]?.id;
+      if (!aid) return;
+      recordSlideScopedChange(aid);
       element.style.zIndex = 0;
       updatedSlides[currentSlideIndex] = {
         ...currentSlide,
@@ -668,7 +847,9 @@ export const EditorProvider = ({
 
       const elementAbove = elements.find(e => (Number(e.style.zIndex) || 0) === currentZ + 1);
       if (elementAbove) {
-        recordChange();
+        const aid = slides[currentSlideIndex]?.id;
+        if (!aid) return;
+        recordSlideScopedChange(aid);
         element.style.zIndex = currentZ + 1;
         elementAbove.style.zIndex = currentZ;
         updatedSlides[currentSlideIndex] = {
@@ -694,7 +875,9 @@ export const EditorProvider = ({
 
       const elementBelow = elements.find(e => (Number(e.style.zIndex) || 0) === currentZ - 1);
       if (elementBelow) {
-        recordChange();
+        const aid = slides[currentSlideIndex]?.id;
+        if (!aid) return;
+        recordSlideScopedChange(aid);
         element.style.zIndex = currentZ - 1;
         elementBelow.style.zIndex = currentZ;
         updatedSlides[currentSlideIndex] = {
@@ -726,7 +909,8 @@ export const EditorProvider = ({
       elements: updatedElements
     };
 
-    recordChange();
+    const aid = slides[currentSlideIndex]?.id;
+    if (aid) recordSlideScopedChange(aid);
     setSlides(updatedSlides);
   };
 
@@ -756,7 +940,8 @@ export const EditorProvider = ({
       elements: applyReorder(currentSlide.elements),
     };
 
-    recordChange();
+    const aid = slides[currentSlideIndex]?.id;
+    if (aid) recordSlideScopedChange(aid);
     setSlides(updatedSlides);
   };
 
@@ -827,7 +1012,8 @@ export const EditorProvider = ({
       ],
     };
 
-    recordChange();
+    const aid = slides[currentSlideIndex]?.id;
+    if (aid) recordSlideScopedChange(aid);
     setSlides(updatedSlides);
     selectElement(groupId);
   };
@@ -856,29 +1042,37 @@ export const EditorProvider = ({
       ],
     };
 
-    recordChange();
+    const aid = slides[currentSlideIndex]?.id;
+    if (aid) recordSlideScopedChange(aid);
     setSlides(updatedSlides);
     selectElements(ungroupedElements.map(element => element.id));
   };
 
   const loadSlides = (newSlides: Slide[]) => {
-    recordChange();
+    recordGlobalChange();
     setSlides(newSlides);
+    setSlideUndoStacks({});
     navigateToSlide(0);
     clearSelection();
   };
 
-  const contextValue = useMemo<EditorContextType>(() => ({
+  const contextValue = useMemo<EditorContextType>(() => {
+    const currentId = slides[currentSlideIndex]?.id;
+    const slideStack = currentId ? getSlideStack(slideUndoStacks, currentId) : emptySlideStack();
+
+    return {
     slides,
     settings,
     updateSettings,
     isDirty,
     markDirty,
     markSaved,
-    canUndo: pastSnapshots.length > 0,
-    canRedo: futureSnapshots.length > 0,
+    canUndo: slideStack.past.length > 0 || globalPastSnapshots.length > 0,
+    canRedo: slideStack.future.length > 0 || globalFutureSnapshots.length > 0,
+    canResetSlide: slideStack.past.length > 0,
     undo,
     redo,
+    resetActiveSlide,
     currentSlideIndex,
     selectedElementId,
     selectedElementIds,
@@ -903,6 +1097,7 @@ export const EditorProvider = ({
     setPropertyMode,
     togglePlay: () => setIsPlaying(!isPlaying),
     updateSlideBackground,
+    updateSlideTimelineDuration,
     bringToFront,
     sendToBack,
     bringForward,
@@ -919,8 +1114,6 @@ export const EditorProvider = ({
     loadSlides,
     canvasSettings,
     updateCanvasSettings,
-    snapGuides,
-    setSnapGuides,
     canvasZoom,
     setCanvasZoom,
     zoomCanvasIn,
@@ -929,7 +1122,8 @@ export const EditorProvider = ({
     copySelectionToClipboard,
     cutSelectionToClipboard,
     pasteClipboardElements,
-  }), [
+    };
+  }, [
     slides,
     settings,
     currentSlideIndex,
@@ -941,11 +1135,11 @@ export const EditorProvider = ({
     isPlaying,
     showBorders,
     canvasSettings,
-    snapGuides,
     canvasZoom,
     isDirty,
-    pastSnapshots,
-    futureSnapshots,
+    slideUndoStacks,
+    globalPastSnapshots,
+    globalFutureSnapshots,
   ]);
 
   return (
@@ -967,7 +1161,6 @@ export const useEditor = () => {
       viewMode: 'desktop' as const,
       isPlaying: false,
       showBorders: false,
-      snapGuides: { x: [], y: [] },
       settings: DEFAULT_SLIDER_SETTINGS,
       canvasSettings: DEFAULT_CANVAS_SETTINGS,
       isDirty: false,
@@ -975,8 +1168,10 @@ export const useEditor = () => {
       markSaved: () => { },
       canUndo: false,
       canRedo: false,
+      canResetSlide: false,
       undo: () => { },
       redo: () => { },
+      resetActiveSlide: () => { },
       updateSettings: () => { },
       addSlide: () => { },
       removeSlide: () => { },
@@ -998,6 +1193,7 @@ export const useEditor = () => {
       setPropertyMode: () => { },
       togglePlay: () => { },
       updateSlideBackground: () => { },
+      updateSlideTimelineDuration: () => { },
       bringToFront: () => { },
       sendToBack: () => { },
       bringForward: () => { },
@@ -1012,7 +1208,6 @@ export const useEditor = () => {
       setShowBorders: () => { },
       loadSlides: () => { },
       updateCanvasSettings: () => { },
-      setSnapGuides: () => { },
       canvasZoom: CANVAS_ZOOM_DEFAULT,
       setCanvasZoom: () => { },
       zoomCanvasIn: () => { },

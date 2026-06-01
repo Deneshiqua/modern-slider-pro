@@ -136,7 +136,9 @@ function boxWritingPatch(kind: BoxKind, nums: Quadruple, unit: LengthUnit): Part
     const key = keysTuple[i];
     const n = nums[i];
 
-    if (key !== undefined && n !== undefined) out[key] = formatBoxValue(n, unit);
+    if (key !== undefined && n !== undefined) {
+      Object.assign(out, { [key]: formatBoxValue(n, unit) } as Partial<ElementStyle>);
+    }
   }
 
   return out;

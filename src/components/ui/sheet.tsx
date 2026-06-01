@@ -19,7 +19,7 @@ const SheetOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SheetPrimitive.Overlay
     className={cn(
-      'msp-fixed msp-inset-0 msp-z-50 msp-bg-black/80  data-[state=open]:msp-animate-in data-[state=closed]:msp-animate-out data-[state=closed]:msp-fade-out-0 data-[state=open]:msp-fade-in-0',
+      'msp-fixed msp-inset-0 msp-z-overlay-dialog msp-bg-black/80  data-[state=open]:msp-animate-in data-[state=closed]:msp-animate-out data-[state=closed]:msp-fade-out-0 data-[state=open]:msp-fade-in-0',
       className
     )}
     {...props}
@@ -29,7 +29,7 @@ const SheetOverlay = React.forwardRef<
 SheetOverlay.displayName = SheetPrimitive.Overlay.displayName;
 
 const sheetVariants = cva(
-  'msp-fixed msp-z-50 msp-gap-4 msp-bg-background msp-p-6 msp-shadow-lg msp-transition msp-ease-in-out data-[state=open]:msp-animate-in data-[state=closed]:msp-animate-out data-[state=closed]:msp-duration-300 data-[state=open]:msp-duration-500',
+  'msp-fixed msp-z-overlay-dialog msp-gap-4 msp-bg-background msp-p-6 msp-shadow-lg msp-transition msp-ease-in-out data-[state=open]:msp-animate-in data-[state=closed]:msp-animate-out data-[state=closed]:msp-duration-300 data-[state=open]:msp-duration-500',
   {
     variants: {
       side: {

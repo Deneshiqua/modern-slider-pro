@@ -2,6 +2,7 @@ import * as React from 'react';
 import * as SelectPrimitive from '@radix-ui/react-select';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 
+import { useMspPortalThemeClasses } from '@/hooks/useMspPortalThemeClasses';
 import { cn } from '@/lib/utils';
 
 const Select = SelectPrimitive.Root;
@@ -53,32 +54,37 @@ SelectScrollDownButton.displayName = SelectPrimitive.ScrollDownButton.displayNam
 const SelectContent = React.forwardRef<
   React.ElementRef<typeof SelectPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof SelectPrimitive.Content>
->(({ className, children, position = 'popper', ...props }, ref) => (
-  <SelectPrimitive.Portal>
-    <SelectPrimitive.Content
-      ref={ref}
-      className={cn(
-        'msp-relative msp-z-50 msp-max-h-96 msp-min-w-[8rem] msp-overflow-hidden msp-rounded-md msp-border msp-bg-popover msp-text-popover-foreground msp-shadow-md data-[state=open]:msp-animate-in data-[state=closed]:msp-animate-out data-[state=closed]:msp-fade-out-0 data-[state=open]:msp-fade-in-0 data-[state=closed]:msp-zoom-out-95 data-[state=open]:msp-zoom-in-95 data-[side=bottom]:msp-slide-in-from-top-2 data-[side=left]:msp-slide-in-from-right-2 data-[side=right]:msp-slide-in-from-left-2 data-[side=top]:msp-slide-in-from-bottom-2',
-        position === 'popper' &&
-          'data-[side=bottom]:msp-translate-y-1 data-[side=left]:-msp-translate-x-1 data-[side=right]:msp-translate-x-1 data-[side=top]:-msp-translate-y-1',
-        className
-      )}
-      position={position}
-      {...props}
-    >
-      <SelectScrollUpButton />
-      <SelectPrimitive.Viewport
+>(({ className, children, position = 'popper', ...props }, ref) => {
+  const portalTheme = useMspPortalThemeClasses();
+
+  return (
+    <SelectPrimitive.Portal>
+      <SelectPrimitive.Content
+        ref={ref}
         className={cn(
-          'p-1',
-          position === 'popper' && 'msp-h-[var(--radix-select-trigger-height)] msp-w-full msp-min-w-[var(--radix-select-trigger-width)]'
+          portalTheme,
+          'msp-relative msp-z-overlay-select msp-max-h-96 msp-min-w-[8rem] msp-overflow-hidden msp-rounded-md msp-border msp-bg-popover msp-text-popover-foreground msp-shadow-md data-[state=open]:msp-animate-in data-[state=closed]:msp-animate-out data-[state=closed]:msp-fade-out-0 data-[state=open]:msp-fade-in-0 data-[state=closed]:msp-zoom-out-95 data-[state=open]:msp-zoom-in-95 data-[side=bottom]:msp-slide-in-from-top-2 data-[side=left]:msp-slide-in-from-right-2 data-[side=right]:msp-slide-in-from-left-2 data-[side=top]:msp-slide-in-from-bottom-2',
+          position === 'popper' &&
+            'data-[side=bottom]:msp-translate-y-1 data-[side=left]:-msp-translate-x-1 data-[side=right]:msp-translate-x-1 data-[side=top]:-msp-translate-y-1',
+          className
         )}
+        position={position}
+        {...props}
       >
-        {children}
-      </SelectPrimitive.Viewport>
-      <SelectScrollDownButton />
-    </SelectPrimitive.Content>
-  </SelectPrimitive.Portal>
-));
+        <SelectScrollUpButton />
+        <SelectPrimitive.Viewport
+          className={cn(
+            'msp-p-1',
+            position === 'popper' && 'msp-h-[var(--radix-select-trigger-height)] msp-w-full msp-min-w-[var(--radix-select-trigger-width)]'
+          )}
+        >
+          {children}
+        </SelectPrimitive.Viewport>
+        <SelectScrollDownButton />
+      </SelectPrimitive.Content>
+    </SelectPrimitive.Portal>
+  );
+});
 SelectContent.displayName = SelectPrimitive.Content.displayName;
 
 const SelectLabel = React.forwardRef<

@@ -2,6 +2,7 @@ import * as React from 'react';
 import * as ContextMenuPrimitive from '@radix-ui/react-context-menu';
 import { Check, ChevronRight, Circle } from 'lucide-react';
 
+import { useMspPortalThemeClasses } from '@/hooks/useMspPortalThemeClasses';
 import { cn } from '@/lib/utils';
 
 const ContextMenu = ContextMenuPrimitive.Root;
@@ -40,33 +41,43 @@ ContextMenuSubTrigger.displayName = ContextMenuPrimitive.SubTrigger.displayName;
 const ContextMenuSubContent = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.SubContent>,
   React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.SubContent>
->(({ className, ...props }, ref) => (
-  <ContextMenuPrimitive.SubContent
-    ref={ref}
-    className={cn(
-      'msp-z-50 msp-min-w-[8rem] msp-overflow-hidden msp-rounded-md msp-border msp-bg-popover msp-p-1 msp-text-popover-foreground msp-shadow-md data-[state=open]:msp-animate-in data-[state=closed]:msp-animate-out data-[state=closed]:msp-fade-out-0 data-[state=open]:msp-fade-in-0 data-[state=closed]:msp-zoom-out-95 data-[state=open]:msp-zoom-in-95 data-[side=bottom]:msp-slide-in-from-top-2 data-[side=left]:msp-slide-in-from-right-2 data-[side=right]:msp-slide-in-from-left-2 data-[side=top]:msp-slide-in-from-bottom-2',
-      className
-    )}
-    {...props}
-  />
-));
+>(({ className, ...props }, ref) => {
+  const portalTheme = useMspPortalThemeClasses();
+
+  return (
+    <ContextMenuPrimitive.SubContent
+      ref={ref}
+      className={cn(
+        portalTheme,
+        'msp-z-overlay-select msp-min-w-[8rem] msp-overflow-hidden msp-rounded-md msp-border msp-bg-popover msp-p-1 msp-text-popover-foreground msp-shadow-md data-[state=open]:msp-animate-in data-[state=closed]:msp-animate-out data-[state=closed]:msp-fade-out-0 data-[state=open]:msp-fade-in-0 data-[state=closed]:msp-zoom-out-95 data-[state=open]:msp-zoom-in-95 data-[side=bottom]:msp-slide-in-from-top-2 data-[side=left]:msp-slide-in-from-right-2 data-[side=right]:msp-slide-in-from-left-2 data-[side=top]:msp-slide-in-from-bottom-2',
+        className
+      )}
+      {...props}
+    />
+  );
+});
 ContextMenuSubContent.displayName = ContextMenuPrimitive.SubContent.displayName;
 
 const ContextMenuContent = React.forwardRef<
   React.ElementRef<typeof ContextMenuPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof ContextMenuPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <ContextMenuPrimitive.Portal>
-    <ContextMenuPrimitive.Content
-      ref={ref}
-      className={cn(
-        'msp-z-50 msp-min-w-[8rem] msp-overflow-hidden msp-rounded-md msp-border msp-bg-popover msp-p-1 msp-text-popover-foreground msp-shadow-md msp-animate-in msp-fade-in-80 data-[state=open]:msp-animate-in data-[state=closed]:msp-animate-out data-[state=closed]:msp-fade-out-0 data-[state=open]:msp-fade-in-0 data-[state=closed]:msp-zoom-out-95 data-[state=open]:msp-zoom-in-95 data-[side=bottom]:msp-slide-in-from-top-2 data-[side=left]:msp-slide-in-from-right-2 data-[side=right]:msp-slide-in-from-left-2 data-[side=top]:msp-slide-in-from-bottom-2',
-        className
-      )}
-      {...props}
-    />
-  </ContextMenuPrimitive.Portal>
-));
+>(({ className, ...props }, ref) => {
+  const portalTheme = useMspPortalThemeClasses();
+
+  return (
+    <ContextMenuPrimitive.Portal>
+      <ContextMenuPrimitive.Content
+        ref={ref}
+        className={cn(
+          portalTheme,
+          'msp-z-overlay-select msp-min-w-[8rem] msp-overflow-hidden msp-rounded-md msp-border msp-bg-popover msp-p-1 msp-text-popover-foreground msp-shadow-md msp-animate-in msp-fade-in-80 data-[state=open]:msp-animate-in data-[state=closed]:msp-animate-out data-[state=closed]:msp-fade-out-0 data-[state=open]:msp-fade-in-0 data-[state=closed]:msp-zoom-out-95 data-[state=open]:msp-zoom-in-95 data-[side=bottom]:msp-slide-in-from-top-2 data-[side=left]:msp-slide-in-from-right-2 data-[side=right]:msp-slide-in-from-left-2 data-[side=top]:msp-slide-in-from-bottom-2',
+          className
+        )}
+        {...props}
+      />
+    </ContextMenuPrimitive.Portal>
+  );
+});
 ContextMenuContent.displayName = ContextMenuPrimitive.Content.displayName;
 
 const ContextMenuItem = React.forwardRef<

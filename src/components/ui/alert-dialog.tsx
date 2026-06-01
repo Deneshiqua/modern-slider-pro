@@ -1,8 +1,9 @@
 import * as React from 'react';
 import * as AlertDialogPrimitive from '@radix-ui/react-alert-dialog';
 
-import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
+import { useMspPortalThemeClasses } from '@/hooks/useMspPortalThemeClasses';
+import { cn } from '@/lib/utils';
 
 const AlertDialog = AlertDialogPrimitive.Root;
 
@@ -16,7 +17,7 @@ const AlertDialogOverlay = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <AlertDialogPrimitive.Overlay
     className={cn(
-      'msp-fixed msp-inset-0 msp-z-50 msp-bg-black/80  data-[state=open]:msp-animate-in data-[state=closed]:msp-animate-out data-[state=closed]:msp-fade-out-0 data-[state=open]:msp-fade-in-0',
+      'msp-fixed msp-inset-0 msp-z-overlay-dialog msp-bg-black/80  data-[state=open]:msp-animate-in data-[state=closed]:msp-animate-out data-[state=closed]:msp-fade-out-0 data-[state=open]:msp-fade-in-0',
       className
     )}
     {...props}
@@ -28,19 +29,24 @@ AlertDialogOverlay.displayName = AlertDialogPrimitive.Overlay.displayName;
 const AlertDialogContent = React.forwardRef<
   React.ElementRef<typeof AlertDialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof AlertDialogPrimitive.Content>
->(({ className, ...props }, ref) => (
-  <AlertDialogPortal>
-    <AlertDialogOverlay />
-    <AlertDialogPrimitive.Content
-      ref={ref}
-      className={cn(
-        'msp-fixed msp-left-[50%] msp-top-[50%] msp-z-50 msp-grid msp-w-full msp-max-w-lg msp-translate-x-[-50%] msp-translate-y-[-50%] msp-gap-4 msp-border msp-bg-background msp-p-6 msp-shadow-lg msp-duration-200 data-[state=open]:msp-animate-in data-[state=closed]:msp-animate-out data-[state=closed]:msp-fade-out-0 data-[state=open]:msp-fade-in-0 data-[state=closed]:msp-zoom-out-95 data-[state=open]:msp-zoom-in-95 data-[state=closed]:msp-slide-out-to-left-1/2 data-[state=closed]:msp-slide-out-to-top-[48%] data-[state=open]:msp-slide-in-from-left-1/2 data-[state=open]:msp-slide-in-from-top-[48%] sm:msp-rounded-lg',
-        className
-      )}
-      {...props}
-    />
-  </AlertDialogPortal>
-));
+>(({ className, ...props }, ref) => {
+  const portalTheme = useMspPortalThemeClasses();
+
+  return (
+    <AlertDialogPortal>
+      <AlertDialogOverlay />
+      <AlertDialogPrimitive.Content
+        ref={ref}
+        className={cn(
+          portalTheme,
+          'msp-fixed msp-left-[50%] msp-top-[50%] msp-z-overlay-dialog msp-grid msp-w-full msp-max-w-lg msp-translate-x-[-50%] msp-translate-y-[-50%] msp-gap-4 msp-border msp-bg-background msp-p-6 msp-shadow-lg msp-duration-200 data-[state=open]:msp-animate-in data-[state=closed]:msp-animate-out data-[state=closed]:msp-fade-out-0 data-[state=open]:msp-fade-in-0 data-[state=closed]:msp-zoom-out-95 data-[state=open]:msp-zoom-in-95 data-[state=closed]:msp-slide-out-to-left-1/2 data-[state=closed]:msp-slide-out-to-top-[48%] data-[state=open]:msp-slide-in-from-left-1/2 data-[state=open]:msp-slide-in-from-top-[48%] sm:msp-rounded-lg',
+          className
+        )}
+        {...props}
+      />
+    </AlertDialogPortal>
+  );
+});
 AlertDialogContent.displayName = AlertDialogPrimitive.Content.displayName;
 
 const AlertDialogHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (

@@ -31,6 +31,20 @@
   --sidebar-ring: 217.2 91.2% 59.8%;
 }
 
+/*
+ * Radix UI wraps Popover/Dropdown/Select positions in `[data-radix-popper-content-wrapper]`
+ * and may apply a low inline z-index (~100). Utilities like `msp-z-overlay-popover` sit on the
+ * *inner* content and only participate in stacking inside that wrapper — nested z-index cannot
+ * outrank sibling host layers / editor panels while the portal’s root stays at ~100 on `body`.
+ * Lift any wrapper that contains MSP overlay tiers so portals stack above host dialogs (z-50) and
+ * above MSP internal dialogs (~100200) while staying below MSP toasts (~100400).
+ *
+ * Selector uses :has(...) so unrelated Radix wrappers on host pages remain untouched.
+ */
+[data-radix-popper-content-wrapper]:has([class*='msp-z-overlay-']) {
+  z-index: 100450 !important;
+}
+
 .msp-slider-pro.msp-dark {
   --background: 222.2 84% 4.9%;
   --foreground: 210 40% 98%;

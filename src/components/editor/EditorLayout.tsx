@@ -1,13 +1,15 @@
+import React from 'react';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
+import { toast, Toaster } from 'sonner';
 
 import Canvas from './Canvas';
 import { EditorProvider, useEditor } from '@/context/EditorContext';
 import LayerPanel from './LayerPanel';
+import { SnapGuidesProvider } from '@/context/SnapGuidesContext';
 import { Language } from '@/lib/translations';
 import { LanguageProvider, TranslationDictionary, useLanguage, type TranslationKey } from '@/context/LanguageContext';
 import PropertiesPanel from './PropertiesPanel';
 import { PublishedSlidesProvider } from '@/context/PublishedSlidesContext';
-import React from 'react';
 import Sidebar from './Sidebar';
 import { Theme, ThemeProvider, useTheme } from '@/context/ThemeContext';
 import Toolbar from './Toolbar';
@@ -15,7 +17,8 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { useDirtyReloadGuard } from '@/hooks/useDirtyReloadGuard';
 import { CanvasSettings, Slide, SliderEditorSavePayload, SliderSettings } from '@/types/editor';
 import { cn } from '@/lib/utils';
-import { toast, Toaster } from 'sonner';
+
+const SlideTimelinePanel = React.lazy(() => import('./SlideTimelinePanel'));
 
 const CLIPBOARD_FEEDBACK_MS = 2200;
 
@@ -64,6 +67,29 @@ export type SliderEditorProps = {
   useSystemTheme?: boolean;
   showToaster?: boolean;
   className?: string;
+};
+
+const TimelinePanelSlot = () => {
+  const [ready, setReady] = React.useState(false);
+
+  React.useEffect(() => {
+    if (typeof requestIdleCallback === 'function') {
+      const id = requestIdleCallback(() => setReady(true), { timeout: 1200 });
+      return () => cancelIdleCallback(id);
+    }
+    const t = globalThis.setTimeout(() => setReady(true), 80);
+    return () => globalThis.clearTimeout(t);
+  }, []);
+
+  if (!ready) {
+    return <div className="msp-h-full msp-min-h-0 msp-bg-muted/30" aria-hidden />;
+  }
+
+  return (
+    <React.Suspense fallback={<div className="msp-h-full msp-min-h-0 msp-bg-muted/30" aria-hidden />}>
+      <SlideTimelinePanel />
+    </React.Suspense>
+  );
 };
 
 const EditorShell = ({
@@ -190,7 +216,15 @@ const EditorShell = ({
             minSize={45}
             className="msp-flex msp-h-full msp-min-h-0 msp-min-w-0 msp-flex-col msp-overflow-hidden"
           >
-            <Canvas />
+            <ResizablePanelGroup direction="vertical" className="msp-h-full msp-min-h-0">
+              <ResizablePanel defaultSize={72} minSize={40} className="msp-min-h-0">
+                <Canvas />
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+              <ResizablePanel defaultSize={28} minSize={15} maxSize={45} className="msp-min-h-0">
+                <TimelinePanelSlot />
+              </ResizablePanel>
+            </ResizablePanelGroup>
           </ResizablePanel>
 
           <ResizableHandle withHandle className="msp-w-1.5 msp-bg-border hover:msp-bg-primary/20 msp-transition-colors" />
@@ -260,6 +294,7 @@ const EditorLayout = ({
             initialSettings={initialSettings}
             initialCanvasSettings={initialCanvasSettings}
           >
+            <SnapGuidesProvider>
             <TooltipProvider>
               <EditorShell
                 onDemoSave={onDemoSave}
@@ -269,6 +304,7 @@ const EditorLayout = ({
                 className={className}
               />
             </TooltipProvider>
+            </SnapGuidesProvider>
           </EditorProvider>
         </PublishedSlidesProvider>
       </LanguageProvider>

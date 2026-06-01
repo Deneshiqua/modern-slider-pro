@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Clock, Eye, EyeOff, GripVertical, Lock, Plus, Trash2, Unlock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Eye, EyeOff, GripVertical, Lock, Plus, Trash2, Unlock } from 'lucide-react';
 import React, { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -19,6 +19,20 @@ function findElementInSlideTree(elements: EditorElement[], id: string): EditorEl
     }
   }
   return null;
+}
+
+/** Fields that affect layer list / ordering — excludes x,y,rotation to avoid Framer `Reorder` sync loops on drag. */
+function layerListSignature(elements: EditorElement[]): string {
+  return elements
+    .map((e) => {
+      const z = Number(e.style?.zIndex) || 0;
+      const vis = e.isVisible === false ? '0' : '1';
+      const lock = e.isLocked ? '1' : '0';
+      const kids = e.children?.length ? String(e.children.length) : '0';
+      const c = (e.content ?? '').slice(0, 64);
+      return `${e.id}:${e.type}:${z}:${vis}:${lock}:${kids}:${e.name ?? ''}:${c}`;
+    })
+    .join('\u001e');
 }
 
 interface LayerItemProps {
@@ -194,7 +208,8 @@ const LayerPanel = () => {
       return sourceLayers.indexOf(b) - sourceLayers.indexOf(a);
     });
     setItems(prev => {
-      if (JSON.stringify(prev) !== JSON.stringify(sorted)) return sorted;
+      if (prev.length !== sorted.length) return sorted;
+      if (layerListSignature(prev) !== layerListSignature(sorted)) return sorted;
       return prev;
     });
   }, [currentSlide?.elements, layersDrillParentId, sourceLayers]);
@@ -222,61 +237,13 @@ const LayerPanel = () => {
   return (
     <Tabs defaultValue="layers" className="msp-flex msp-flex-col msp-h-full msp-overflow-hidden">
       <TabsList className="msp-w-full msp-rounded-none msp-border-b msp-h-9 msp-bg-secondary/30 msp-shrink-0 msp-justify-start msp-px-1 msp-gap-0">
-        <TabsTrigger value="layers" className="msp-text-xs msp-h-7 msp-px-3 msp-rounded-sm">
-          {t('editor.layers.title')}
-        </TabsTrigger>
         <TabsTrigger value="slides" className="msp-text-xs msp-h-7 msp-px-3 msp-rounded-sm">
           Slaytlar
         </TabsTrigger>
-        <TabsTrigger value="history" className="msp-text-xs msp-h-7 msp-px-3 msp-rounded-sm" disabled>
-          <Clock className="msp-h-3 msp-w-3 msp-mr-1 msp-opacity-40" />
-          Tarihçe
+        <TabsTrigger value="layers" className="msp-text-xs msp-h-7 msp-px-3 msp-rounded-sm">
+          {t('editor.layers.title')}
         </TabsTrigger>
       </TabsList>
-
-      {/* Katmanlar */}
-      <TabsContent
-        value="layers"
-        className="msp-flex-1 msp-min-h-0 msp-overflow-y-auto msp-m-0 msp-p-2 data-[state=inactive]:msp-hidden"
-      >
-        {!items || items.length === 0 ? (
-          <div className="msp-text-center msp-text-muted-foreground msp-text-xs msp-py-4">
-            Bu slayta eleman eklenmemiş
-          </div>
-        ) : (
-          <>
-            {layersDrillParentId ? (
-              <div className="msp-mb-2 msp-flex msp-shrink-0 msp-items-center">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  type="button"
-                  className="msp-h-7 msp-gap-1 msp-pl-2 msp-pr-3 msp-text-xs"
-                  onClick={exitLayersDrill}
-                >
-                  <ChevronLeft className="msp-h-3.5 msp-w-3.5 msp-shrink-0" />
-                  {t('editor.layers.backFromGroup')}
-                </Button>
-              </div>
-            ) : null}
-            <Reorder.Group axis="y" values={items} onReorder={handleReorder} className="msp-flex msp-w-full msp-min-w-0 msp-flex-col msp-gap-1">
-            {items.map((element) => (
-              <LayerItem
-                key={element.id}
-                element={element}
-                selectionCount={selectedElementIds.length}
-                isSelected={selectedElementIds.includes(element.id) || selectedElementId === element.id}
-                selectElement={selectElement}
-                toggleElementSelection={toggleElementSelection}
-                updateElement={updateElement}
-                removeElement={removeElement}
-                enterLayersDrill={enterLayersDrill}
-              />
-            ))}
-          </Reorder.Group>
-          </>
-        )}
-      </TabsContent>
 
       {/* Slaytlar */}
       <TabsContent
@@ -356,12 +323,48 @@ const LayerPanel = () => {
         </div>
       </TabsContent>
 
-      {/* Tarihçe — placeholder */}
+      {/* Katmanlar */}
       <TabsContent
-        value="history"
-        className="msp-flex-1 msp-min-h-0 msp-m-0 msp-flex msp-items-center msp-justify-center data-[state=inactive]:msp-hidden"
+        value="layers"
+        className="msp-flex-1 msp-min-h-0 msp-overflow-y-auto msp-m-0 msp-p-2 data-[state=inactive]:msp-hidden"
       >
-        <p className="msp-text-xs msp-text-muted-foreground">Yakında</p>
+        {!items || items.length === 0 ? (
+          <div className="msp-text-center msp-text-muted-foreground msp-text-xs msp-py-4">
+            Bu slayta eleman eklenmemiş
+          </div>
+        ) : (
+          <>
+            {layersDrillParentId ? (
+              <div className="msp-mb-2 msp-flex msp-shrink-0 msp-items-center">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  type="button"
+                  className="msp-h-7 msp-gap-1 msp-pl-2 msp-pr-3 msp-text-xs"
+                  onClick={exitLayersDrill}
+                >
+                  <ChevronLeft className="msp-h-3.5 msp-w-3.5 msp-shrink-0" />
+                  {t('editor.layers.backFromGroup')}
+                </Button>
+              </div>
+            ) : null}
+            <Reorder.Group axis="y" values={items} onReorder={handleReorder} className="msp-flex msp-w-full msp-min-w-0 msp-flex-col msp-gap-1">
+            {items.map((element) => (
+              <LayerItem
+                key={element.id}
+                element={element}
+                selectionCount={selectedElementIds.length}
+                isSelected={selectedElementIds.includes(element.id) || selectedElementId === element.id}
+                selectElement={selectElement}
+                toggleElementSelection={toggleElementSelection}
+                updateElement={updateElement}
+                removeElement={removeElement}
+                enterLayersDrill={enterLayersDrill}
+              />
+            ))}
+          </Reorder.Group>
+          </>
+        )}
       </TabsContent>
     </Tabs>
   );

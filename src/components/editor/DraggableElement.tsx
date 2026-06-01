@@ -1,8 +1,8 @@
-import React, { useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 
 import ContextMenu from './ContextMenu';
-import { EditorElement } from '@/types/editor';
+import { CanvasSettings, EditorElement, ViewMode } from '@/types/editor';
 import { Rnd } from 'react-rnd';
 import { getEditorViewportSize } from '@/lib/constants';
 import { cn } from '@/lib/utils';
@@ -10,7 +10,12 @@ import { motion } from 'framer-motion';
 import { elementSubtreeContainsSlide } from '@/lib/elementSubtree';
 import { formatElementHoverStyleTag } from '@/lib/elementHoverCss';
 import { resolveElementProperties } from '@/lib/responsive';
+import { getAncestorSlideOffset } from '@/lib/alignment';
+import { getElementOuterSize } from '@/lib/groupBounds';
+import { pointerClientToSlideLogical } from '@/lib/pointerClientToSlideLogical';
 import { useEditor } from '@/context/EditorContext';
+import { useSetSnapGuides } from '@/context/SnapGuidesContext';
+import { resolveElementPlaybackTransition } from '@/lib/timelineBridge';
 
 interface DraggableElementProps {
   element: EditorElement;
@@ -20,6 +25,89 @@ interface DraggableElementProps {
 }
 
 const SNAP_THRESHOLD = 6;
+
+/** Ekran koordinatı (`clientX`/`clientY`) — cetvel/ölçümle kıyas için. */
+function getPointerClientFromDragEvent(e: unknown): { x: number; y: number } | undefined {
+  if (!e || typeof e !== 'object') return undefined;
+  const o = e as Record<string, unknown>;
+  if (typeof o.clientX === 'number' && typeof o.clientY === 'number') {
+    return { x: o.clientX, y: o.clientY };
+  }
+  const ne = o.nativeEvent;
+  if (ne && typeof ne === 'object' && typeof (ne as MouseEvent).clientX === 'number') {
+    const m = ne as MouseEvent;
+    return { x: m.clientX, y: m.clientY };
+  }
+  return undefined;
+}
+
+function devLogPointerFields(e: unknown, canvasZoom: number) {
+  const mouseClient = getPointerClientFromDragEvent(e);
+  const pointerInSlide =
+    mouseClient != null ? pointerClientToSlideLogical(mouseClient.x, mouseClient.y, canvasZoom) : null;
+  return { mouseClient, pointerInSlide };
+}
+
+function localToSlideXY(
+  localX: number,
+  localY: number,
+  elementId: string,
+  slideRoots: EditorElement[],
+  viewMode: ViewMode,
+) {
+  const ancestor = getAncestorSlideOffset(slideRoots, elementId, viewMode);
+  return { x: localX + ancestor.x, y: localY + ancestor.y };
+}
+
+function slideToLocalXY(
+  slideX: number,
+  slideY: number,
+  elementId: string,
+  slideRoots: EditorElement[],
+  viewMode: ViewMode,
+) {
+  const ancestor = getAncestorSlideOffset(slideRoots, elementId, viewMode);
+  return { x: slideX - ancestor.x, y: slideY - ancestor.y };
+}
+
+function resolveLocalPositionFromPointer(
+  e: unknown,
+  canvasZoom: number,
+  grabOffsetSlide: { x: number; y: number } | null,
+  elementId: string,
+  slideRoots: EditorElement[],
+  viewMode: ViewMode,
+): { x: number; y: number } | null {
+  const mouse = getPointerClientFromDragEvent(e);
+  if (!mouse || !grabOffsetSlide) return null;
+  const slidePt = pointerClientToSlideLogical(mouse.x, mouse.y, canvasZoom);
+  if (!slidePt) return null;
+  return slideToLocalXY(
+    slidePt.x - grabOffsetSlide.x,
+    slidePt.y - grabOffsetSlide.y,
+    elementId,
+    slideRoots,
+    viewMode,
+  );
+}
+
+function clampLocalToSlideBounds(
+  localX: number,
+  localY: number,
+  element: EditorElement,
+  slideRoots: EditorElement[],
+  viewMode: ViewMode,
+  canvasSettings: CanvasSettings,
+) {
+  const slide = localToSlideXY(localX, localY, element.id, slideRoots, viewMode);
+  const { width: vw, height: vh } = getEditorViewportSize(viewMode, canvasSettings);
+  const { width: ew, height: eh } = getElementOuterSize(element, viewMode);
+  const clampedSlide = {
+    x: Math.max(0, Math.min(slide.x, vw - ew)),
+    y: Math.max(0, Math.min(slide.y, vh - eh)),
+  };
+  return slideToLocalXY(clampedSlide.x, clampedSlide.y, element.id, slideRoots, viewMode);
+}
 
 function findElementInTree(elements: EditorElement[], id: string): EditorElement | null {
   for (const el of elements) {
@@ -46,16 +134,45 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
     propertyMode,
     canvasSettings,
     canvasZoom,
-    setSnapGuides,
     enterLayersDrill,
     layersDrillParentId,
   } = useEditor();
+  const setSnapGuides = useSetSnapGuides();
   const renderedElement = resolveElementProperties(element, viewMode);
   const isSelected = selectedElementIds.includes(element.id);
   const rndRef = useRef<Rnd>(null);
   const dragStartPositionsRef = useRef<Record<string, { x: number; y: number }>>({});
+  /** İmleç ile katman arasındaki slayt-uzayı ofseti (`react-rnd` `scale` + `transform` yerine). */
+  const dragGrabOffsetSlideRef = useRef<{ x: number; y: number } | null>(null);
   const selectedElementIdsRef = useRef(selectedElementIds);
   selectedElementIdsRef.current = selectedElementIds;
+  /** Tek seçimde sürüklerken sadece bu öğe yeniden çizer; `setSlides` her mousemove tetiklemez (akıcı sürükleme). */
+  const [localDragPos, setLocalDragPos] = useState<{ x: number; y: number } | null>(null);
+  const snapGuidesRafRef = useRef<number | null>(null);
+  const pendingSnapGuidesRef = useRef<{ x: number[]; y: number[] } | null>(null);
+
+  const flushSnapGuides = () => {
+    snapGuidesRafRef.current = null;
+    const p = pendingSnapGuidesRef.current;
+    pendingSnapGuidesRef.current = null;
+    if (p) setSnapGuides(p);
+  };
+
+  const scheduleSnapGuides = (next: { x: number[]; y: number[] }) => {
+    pendingSnapGuidesRef.current = next;
+    snapGuidesRafRef.current ??= requestAnimationFrame(flushSnapGuides);
+  };
+
+  const cancelSnapGuidesRaf = () => {
+    if (snapGuidesRafRef.current != null) {
+      cancelAnimationFrame(snapGuidesRafRef.current);
+      snapGuidesRafRef.current = null;
+    }
+    pendingSnapGuidesRef.current = null;
+  };
+
+  useEffect(() => () => cancelSnapGuidesRaf(), []);
+
   const isLocked = element.isLocked === true;
 
   const slideRoots = slides[currentSlideIndex]?.elements ?? [];
@@ -103,22 +220,19 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
   };
 
   const calculateSnapGuides = (x: number, y: number) => {
-    const w = Number(renderedElement.style.width || 100);
-    const h = Number(renderedElement.style.height || 50);
+    const { width: w, height: h } = getElementOuterSize(element, viewMode);
     const viewport = getEditorViewportSize(viewMode, canvasSettings);
 
     // Snap target lines: canvas edges + center + sibling elements
     const targetX: number[] = [0, viewport.width / 2, viewport.width];
     const targetY: number[] = [0, viewport.height / 2, viewport.height];
 
-    const siblings = slides[currentSlideIndex].elements
-      .filter(e => e.id !== element.id)
-      .map(sibling => resolveElementProperties(sibling, viewMode));
-    for (const sib of siblings) {
-      const sw = Number(sib.style.width || 100);
-      const sh = Number(sib.style.height || 50);
-      targetX.push(sib.x, sib.x + sw / 2, sib.x + sw);
-      targetY.push(sib.y, sib.y + sh / 2, sib.y + sh);
+    const siblingRoots = slides[currentSlideIndex].elements.filter(e => e.id !== element.id);
+    for (const rawSib of siblingRoots) {
+      const resolvedSib = resolveElementProperties(rawSib, viewMode);
+      const { width: sw, height: sh } = getElementOuterSize(rawSib, viewMode);
+      targetX.push(resolvedSib.x, resolvedSib.x + sw / 2, resolvedSib.x + sw);
+      targetY.push(resolvedSib.y, resolvedSib.y + sh / 2, resolvedSib.y + sh);
     }
 
     // My edges: [left, center, right] and [top, center, bottom]
@@ -162,7 +276,11 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
   const renderContent = () => {
     switch (element.type) {
       case 'text':
-        return <p>{renderedElement.content}</p>;
+        return (
+          <p className="msp-m-0 msp-block msp-min-w-0 msp-w-full msp-p-0 msp-whitespace-pre-wrap msp-indent-0">
+            {renderedElement.content}
+          </p>
+        );
       case 'image':
         return (
           <img
@@ -331,7 +449,11 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
             data-msp-el-hover={element.id}
             initial={element.animation.initial}
             animate={element.animation.animate}
-            transition={element.animation.transition}
+            transition={
+              isPreview
+                ? resolveElementPlaybackTransition(element) ?? element.animation.transition
+                : element.animation.transition
+            }
             className={previewShellClassName}
             style={{ ...previewStyle, ...groupLayerOutline }}
           >
@@ -359,17 +481,83 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
   return (
     <Rnd
       ref={rndRef}
-      // Parent slide uses CSS `transform: scale(canvasZoom)`; mouse deltas must match logical coords.
+      data-msp-editor-el-id={element.id}
+      /** Konum sürüklerken `pointerClientToSlideLogical` ile hesaplanır; `scale` yalnızca yeniden boyutlandırma için. */
       scale={canvasZoom}
       size={{ width: renderedElement.style.width || 'auto', height: renderedElement.style.height || 'auto' }}
-      position={{ x: renderedElement.x, y: renderedElement.y }}
-      onDrag={(_e, d) => {
+      position={{
+        x: localDragPos?.x ?? renderedElement.x,
+        y: localDragPos?.y ?? renderedElement.y,
+      }}
+      onDrag={(e, d) => {
         const currentIds = selectedElementIdsRef.current;
         const dragLeaderMulti = currentIds.length > 1 && currentIds.includes(element.id);
 
+        const fromPointer = resolveLocalPositionFromPointer(
+          e,
+          canvasZoom,
+          dragGrabOffsetSlideRef.current,
+          element.id,
+          slideRoots,
+          viewMode,
+        );
+
+        const applyLocalPos = (raw: { x: number; y: number }) => {
+          const pos = clampLocalToSlideBounds(
+            raw.x,
+            raw.y,
+            element,
+            slideRoots,
+            viewMode,
+            canvasSettings,
+          );
+          if (canvasSettings.snapToElements) {
+            const { guidesX, guidesY } = calculateSnapGuides(pos.x, pos.y);
+            scheduleSnapGuides({ x: guidesX, y: guidesY });
+          }
+          return pos;
+        };
+
+        if (fromPointer) {
+          if (!dragLeaderMulti) {
+            setLocalDragPos(applyLocalPos(fromPointer));
+            return;
+          }
+
+          const startLeader = dragStartPositionsRef.current[element.id];
+          if (!startLeader) return;
+
+          const deltaX = fromPointer.x - startLeader.x;
+          const deltaY = fromPointer.y - startLeader.y;
+
+          const updates = currentIds.reduce<Record<string, { x: number; y: number }>>((acc, selectedId) => {
+            const startPos = dragStartPositionsRef.current[selectedId];
+            if (startPos) {
+              acc[selectedId] = {
+                x: startPos.x + deltaX,
+                y: startPos.y + deltaY,
+              };
+            }
+            return acc;
+          }, {});
+
+          if (Object.keys(updates).length > 0) {
+            updateElementsForMode(updates, propertyMode, { skipHistory: true });
+          }
+          return;
+        }
+
+        /** Yedek: slayt ölçümü yoksa `react-rnd` konumu */
         if (canvasSettings.snapToElements) {
           const { guidesX, guidesY } = calculateSnapGuides(d.x, d.y);
-          setSnapGuides({ x: guidesX, y: guidesY });
+          scheduleSnapGuides({ x: guidesX, y: guidesY });
+          if (!dragLeaderMulti) {
+            setLocalDragPos({ x: d.x, y: d.y });
+            return;
+          }
+        } else if (!dragLeaderMulti) {
+          setLocalDragPos({ x: d.x, y: d.y });
+          return;
         }
 
         if (!dragLeaderMulti) return;
@@ -395,7 +583,8 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
           updateElementsForMode(updates, propertyMode, { skipHistory: true });
         }
       }}
-      onDragStop={(_e, d) => {
+      onDragStop={(e, d) => {
+        cancelSnapGuidesRaf();
         setSnapGuides({ x: [], y: [] });
         const currentIds = selectedElementIdsRef.current;
         const activeSelectionIds = currentIds.includes(element.id) && currentIds.length > 1
@@ -403,9 +592,20 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
           : [element.id];
         const startPosition = dragStartPositionsRef.current[element.id] ?? { x: renderedElement.x, y: renderedElement.y };
 
+        const pointerEnd = resolveLocalPositionFromPointer(
+          e,
+          canvasZoom,
+          dragGrabOffsetSlideRef.current,
+          element.id,
+          slideRoots,
+          viewMode,
+        );
+        const releaseLocal = pointerEnd ?? { x: d.x, y: d.y };
+        dragGrabOffsetSlideRef.current = null;
+
         if (activeSelectionIds.length > 1) {
-          const deltaX = d.x - startPosition.x;
-          const deltaY = d.y - startPosition.y;
+          const deltaX = releaseLocal.x - startPosition.x;
+          const deltaY = releaseLocal.y - startPosition.y;
           const updates = activeSelectionIds.reduce<Record<string, { x: number; y: number }>>((acc, selectedId) => {
             const selectedStartPosition = dragStartPositionsRef.current[selectedId];
             if (selectedStartPosition) {
@@ -418,17 +618,50 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
             return acc;
           }, {});
 
+          if (import.meta.env.DEV) {
+            console.log('[msp-drag:end]', {
+              type: 'multi',
+              leaderId: element.id,
+              delta: { x: deltaX, y: deltaY },
+              committed: updates,
+              ...devLogPointerFields(e, canvasZoom),
+            });
+          }
+
           updateElementsForMode(updates, propertyMode);
           dragStartPositionsRef.current = {};
           return;
         }
 
-        if (canvasSettings.snapToElements) {
-          const { snapX, snapY } = calculateSnapGuides(d.x, d.y);
-          updateElementForMode(element.id, { x: snapX, y: snapY }, propertyMode);
-        } else {
-          updateElementForMode(element.id, { x: d.x, y: d.y }, propertyMode);
+        const clampedRelease = clampLocalToSlideBounds(
+          releaseLocal.x,
+          releaseLocal.y,
+          element,
+          slideRoots,
+          viewMode,
+          canvasSettings,
+        );
+        const committed = canvasSettings.snapToElements
+          ? (() => {
+              const { snapX, snapY } = calculateSnapGuides(clampedRelease.x, clampedRelease.y);
+              return { x: snapX, y: snapY };
+            })()
+          : clampedRelease;
+
+        if (import.meta.env.DEV) {
+          console.log('[msp-drag:end]', {
+            type: 'single',
+            elementId: element.id,
+            rnd: { x: d.x, y: d.y },
+            releaseLocal: clampedRelease,
+            committed,
+            snap: canvasSettings.snapToElements,
+            ...devLogPointerFields(e, canvasZoom),
+          });
         }
+
+        updateElementForMode(element.id, committed, propertyMode);
+        setLocalDragPos(null);
       }}
       onResizeStop={(_e, _direction, ref, _delta, position) => {
         updateElementForMode(element.id, {
@@ -444,6 +677,9 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
         if (evt instanceof MouseEvent && evt.button !== 0) return;
 
         e.stopPropagation();
+        cancelSnapGuidesRaf();
+        setLocalDragPos(null);
+        dragGrabOffsetSlideRef.current = null;
 
         const currentIds = selectedElementIdsRef.current;
         const activeSelectionIds = currentIds.includes(element.id) && currentIds.length > 1
@@ -462,6 +698,27 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
 
           return acc;
         }, {});
+
+        const mouse = getPointerClientFromDragEvent(e);
+        const slidePt = mouse ? pointerClientToSlideLogical(mouse.x, mouse.y, canvasZoom) : null;
+        const start = dragStartPositionsRef.current[element.id];
+        if (slidePt && start) {
+          const slideStart = localToSlideXY(start.x, start.y, element.id, slideRoots, viewMode);
+          dragGrabOffsetSlideRef.current = {
+            x: slidePt.x - slideStart.x,
+            y: slidePt.y - slideStart.y,
+          };
+        }
+
+        if (import.meta.env.DEV) {
+          console.log('[msp-drag:start]', {
+            elementId: element.id,
+            multi: activeSelectionIds.length > 1,
+            startPositions: { ...dragStartPositionsRef.current },
+            grabOffsetSlide: dragGrabOffsetSlideRef.current,
+            ...devLogPointerFields(e, canvasZoom),
+          });
+        }
       }}
       disableDragging={isPreview || isLocked || freezeGroupHullWhileDrillingInside}
       enableResizing={!isPreview && !isLocked && !freezeGroupHullWhileDrillingInside && isSelected && selectedElementIds.length <= 1
@@ -532,4 +789,4 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
   );
 };
 
-export default DraggableElement;
+export default React.memo(DraggableElement);

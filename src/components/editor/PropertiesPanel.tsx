@@ -1,9 +1,10 @@
 import { ANIMATION_PRESETS, FONT_SIZES } from '@/lib/constants';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { ArrowDown, ArrowUp, BringToFront, Image as ImageIcon, Palette, SendToBack, Type, Video } from 'lucide-react';
+import { AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, BringToFront, Image as ImageIcon, Palette, SendToBack, Type, Video } from 'lucide-react';
 import React, { useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 
 import { Button } from '@/components/ui/button';
 import ColorPicker from './ColorPicker';
@@ -18,11 +19,16 @@ import { useLanguage } from '@/context/LanguageContext';
 import { EditorElement, ResponsivePropertyMode } from '@/types/editor';
 import AlignmentControls from './AlignmentControls';
 import ColorAndBorderControls from './ColorAndBorderControls';
+import { MultiSelectionAlignmentControls } from './MultiSelectionAlignmentControls';
+import { RowAlignmentControls } from './RowAlignmentControls';
+import { ColumnAlignmentControls } from './ColumnAlignmentControls';
 import SpacingControls from './SpacingControls';
+import { pruneMultiSelectionIds } from '@/lib/alignment';
 
 const PropertiesPanel = () => {
   const {
     selectedElementId,
+    selectedElementIds,
     slides,
     currentSlideIndex,
     updateElement,
@@ -39,7 +45,13 @@ const PropertiesPanel = () => {
   const { t } = useLanguage();
 
   // State to persist accordion open/close status
-  const [openAccordionItems, setOpenAccordionItems] = useState<string[]>(['style', 'color', 'spacing', 'content', 'settings']);
+  const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([
+    'content',
+    'color',
+    'style',
+    'animation',
+    'spacing',
+  ]);
   const [isBackgroundMediaManagerOpen, setIsBackgroundMediaManagerOpen] = useState(false);
 
   const currentSlide = slides[currentSlideIndex];
@@ -63,6 +75,49 @@ const PropertiesPanel = () => {
   const activeElement = selectedElement || (selectedElementId ? findElementRecursive(currentSlide.elements, selectedElementId) : null);
   const editableElement = activeElement ? getElementPropertiesForMode(activeElement, propertyMode) : null;
   const activeElementOpacity = typeof editableElement?.style.opacity === 'number' ? editableElement.style.opacity : 1;
+
+  const handlePropertyModeChange = (mode: ResponsivePropertyMode) => {
+    setPropertyMode(mode);
+
+    if (mode !== 'default') {
+      setViewMode(mode);
+    }
+  };
+
+  if (selectedElementIds.length >= 2) {
+    const pruned = pruneMultiSelectionIds(selectedElementIds, currentSlide.elements);
+
+    return (
+      <div className="msp-flex msp-flex-col msp-h-full msp-overflow-hidden msp-bg-card">
+        <div className="msp-px-3 msp-py-2 msp-border-b msp-font-semibold msp-text-xs msp-shrink-0">
+          <span>{t('editor.properties.multiSelectionTitle')}</span>
+          <span className="msp-text-muted-foreground msp-font-normal"> · {selectedElementIds.length}</span>
+        </div>
+        <div className="msp-flex-1 msp-overflow-y-auto">
+          <div className="msp-p-3 msp-border-b msp-space-y-2">
+            <Tabs value={propertyMode} onValueChange={(value) => handlePropertyModeChange(value as ResponsivePropertyMode)}>
+              <TabsList className="msp-grid msp-w-full msp-grid-cols-4 msp-h-8">
+                <TabsTrigger value="default" className="msp-text-xs">Default</TabsTrigger>
+                <TabsTrigger value="desktop" className="msp-text-xs">Desktop</TabsTrigger>
+                <TabsTrigger value="tablet" className="msp-text-xs">Tablet</TabsTrigger>
+                <TabsTrigger value="mobile" className="msp-text-xs">Mobile</TabsTrigger>
+              </TabsList>
+            </Tabs>
+            <p className="msp-text-[11px] msp-text-muted-foreground">{t('editor.properties.multiSelectionModeHint')}</p>
+          </div>
+          <div className="msp-p-3 msp-space-y-3">
+            <ColumnAlignmentControls propertyMode={propertyMode} />
+            <RowAlignmentControls propertyMode={propertyMode} />
+            {pruned.length >= 2 ? (
+              <MultiSelectionAlignmentControls selectionIds={selectedElementIds} propertyMode={propertyMode} />
+            ) : (
+              <p className="msp-text-xs msp-text-muted-foreground">{t('editor.properties.multiSelectionPrunedHint')}</p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!activeElement) {
     return (
@@ -154,17 +209,14 @@ const PropertiesPanel = () => {
     }, propertyMode);
   };
 
-  const handlePropertyModeChange = (mode: ResponsivePropertyMode) => {
-    setPropertyMode(mode);
-
-    if (mode !== 'default') {
-      setViewMode(mode);
-    }
-  };
-
   const accordionTriggerClass =
     'msp-min-h-11 msp-px-4 msp-py-3 msp-text-xs msp-font-medium msp-text-foreground msp-transition-colors hover:msp-no-underline hover:msp-bg-muted/55 data-[state=closed]:msp-bg-muted/15 data-[state=open]:msp-bg-muted/40 data-[state=open]:msp-border-b msp-border-border';
   const accordionBodyClass = 'msp-px-3 msp-pt-3 msp-pb-4 msp-bg-muted/20';
+
+  const resolvedTextAlign =
+    editableElement?.style.textAlign === 'center' || editableElement?.style.textAlign === 'right'
+      ? editableElement.style.textAlign
+      : 'left';
 
   return (
     <div className="msp-flex msp-flex-col msp-h-full msp-overflow-hidden msp-bg-card">
@@ -193,7 +245,78 @@ const PropertiesPanel = () => {
             className="msp-w-full msp-space-y-3"
           >
 
-            {/* Style Section */}
+            {/* Content */}
+            <AccordionItem value="content">
+              <AccordionTrigger className={accordionTriggerClass}>{t('editor.properties.content')}</AccordionTrigger>
+              <AccordionContent className={`${accordionBodyClass} msp-space-y-3`}>
+                <div className="msp-space-y-1">
+                  <Label className="msp-text-xs">{t('editor.properties.content')}</Label>
+                  <Input
+                    className="msp-h-7 msp-text-xs"
+                    value={activeElement.content}
+                    onChange={(e) => updateElement(activeElement.id, { content: e.target.value })}
+                  />
+                </div>
+                {activeElement.type === 'text' || activeElement.type === 'button' ? (
+                  <div className="msp-space-y-1">
+                    <Label className="msp-text-xs">{t('editor.properties.textAlign')}</Label>
+                    <ToggleGroup
+                      type="single"
+                      variant="outline"
+                      size="sm"
+                      className="msp-grid msp-w-full msp-grid-cols-3 msp-gap-1"
+                      value={resolvedTextAlign}
+                      onValueChange={(val) => {
+                        if (val) handleResponsiveStyleChange('textAlign', val);
+                      }}
+                    >
+                      <ToggleGroupItem
+                        value="left"
+                        aria-label={t('editor.properties.alignLeft')}
+                        title={t('editor.properties.alignLeft')}
+                        className="msp-h-8 msp-w-full msp-p-0 data-[state=on]:msp-border-primary data-[state=on]:msp-bg-primary/15"
+                      >
+                        <AlignLeft className="msp-h-3.5 msp-w-3.5" strokeWidth={1.75} />
+                      </ToggleGroupItem>
+                      <ToggleGroupItem
+                        value="center"
+                        aria-label={t('editor.properties.alignCenter')}
+                        title={t('editor.properties.alignCenter')}
+                        className="msp-h-8 msp-w-full msp-p-0 data-[state=on]:msp-border-primary data-[state=on]:msp-bg-primary/15"
+                      >
+                        <AlignCenter className="msp-h-3.5 msp-w-3.5" strokeWidth={1.75} />
+                      </ToggleGroupItem>
+                      <ToggleGroupItem
+                        value="right"
+                        aria-label={t('editor.properties.alignRight')}
+                        title={t('editor.properties.alignRight')}
+                        className="msp-h-8 msp-w-full msp-p-0 data-[state=on]:msp-border-primary data-[state=on]:msp-bg-primary/15"
+                      >
+                        <AlignRight className="msp-h-3.5 msp-w-3.5" strokeWidth={1.75} />
+                      </ToggleGroupItem>
+                    </ToggleGroup>
+                  </div>
+                ) : null}
+                <ColumnAlignmentControls propertyMode={propertyMode} />
+                <RowAlignmentControls propertyMode={propertyMode} />
+                <AlignmentControls elementId={activeElement.id} propertyMode={propertyMode} />
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="color">
+              <AccordionTrigger className={accordionTriggerClass}>{t('editor.properties.colorTitle')}</AccordionTrigger>
+              <AccordionContent className={`${accordionBodyClass} msp-space-y-3`}>
+                {editableElement ? (
+                  <ColorAndBorderControls
+                    elementId={activeElement.id}
+                    editableElement={editableElement}
+                    propertyMode={propertyMode}
+                  />
+                ) : null}
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Style */}
             <AccordionItem value="style">
               <AccordionTrigger className={accordionTriggerClass}>{t('editor.properties.style')}</AccordionTrigger>
               <AccordionContent className={`${accordionBodyClass} msp-space-y-3`}>
@@ -322,69 +445,7 @@ const PropertiesPanel = () => {
               </AccordionContent>
             </AccordionItem>
 
-            <AccordionItem value="color">
-              <AccordionTrigger className={accordionTriggerClass}>{t('editor.properties.colorTitle')}</AccordionTrigger>
-              <AccordionContent className={`${accordionBodyClass} msp-space-y-3`}>
-                {editableElement ? (
-                  <ColorAndBorderControls
-                    elementId={activeElement.id}
-                    editableElement={editableElement}
-                    propertyMode={propertyMode}
-                  />
-                ) : null}
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Spacing Section */}
-            <AccordionItem value="spacing">
-              <AccordionTrigger className={accordionTriggerClass}>{t('editor.properties.spacingTitle')}</AccordionTrigger>
-              <AccordionContent className={accordionBodyClass}>
-                {editableElement ? (
-                  <SpacingControls
-                    elementId={activeElement.id}
-                    editableElement={editableElement}
-                    propertyMode={propertyMode}
-                  />
-                ) : null}
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Content Section */}
-            <AccordionItem value="content">
-              <AccordionTrigger className={accordionTriggerClass}>{t('editor.properties.content')}</AccordionTrigger>
-              <AccordionContent className={`${accordionBodyClass} msp-space-y-3`}>
-                <AlignmentControls elementId={activeElement.id} propertyMode={propertyMode} />
-
-                <div className="msp-space-y-1">
-                  <Label className="msp-text-xs">{t('editor.properties.content')}</Label>
-                  <Input
-                    className="msp-h-7 msp-text-xs"
-                    value={activeElement.content}
-                    onChange={(e) => updateElement(activeElement.id, { content: e.target.value })}
-                  />
-                </div>
-                {activeElement.type === 'text' || activeElement.type === 'button' ? (
-                  <div className="msp-space-y-1">
-                    <Label className="msp-text-xs">{t('editor.properties.textAlign')}</Label>
-                    <Select
-                      value={editableElement?.style.textAlign || 'left'}
-                      onValueChange={(val) => handleResponsiveStyleChange('textAlign', val)}
-                    >
-                      <SelectTrigger className="msp-h-7 msp-text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="left">{t('editor.properties.alignLeft')}</SelectItem>
-                        <SelectItem value="center">{t('editor.properties.alignCenter')}</SelectItem>
-                        <SelectItem value="right">{t('editor.properties.alignRight')}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ) : null}
-              </AccordionContent>
-            </AccordionItem>
-
-            {/* Animation Section */}
+            {/* Animation */}
             <AccordionItem value="animation">
               <AccordionTrigger className={accordionTriggerClass}>{t('editor.properties.animation')}</AccordionTrigger>
               <AccordionContent className={`${accordionBodyClass} msp-space-y-3`}>
@@ -422,6 +483,20 @@ const PropertiesPanel = () => {
                     <p className="msp-text-muted-foreground msp-mt-1">Önizle butonuna bas.</p>
                   </div>
                 )}
+              </AccordionContent>
+            </AccordionItem>
+
+            {/* Spacing */}
+            <AccordionItem value="spacing">
+              <AccordionTrigger className={accordionTriggerClass}>{t('editor.properties.spacingTitle')}</AccordionTrigger>
+              <AccordionContent className={accordionBodyClass}>
+                {editableElement ? (
+                  <SpacingControls
+                    elementId={activeElement.id}
+                    editableElement={editableElement}
+                    propertyMode={propertyMode}
+                  />
+                ) : null}
               </AccordionContent>
             </AccordionItem>
 

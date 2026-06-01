@@ -36,6 +36,17 @@ export interface ResponsiveElementProperties {
   hoverStyle?: ElementHoverColors;
 }
 
+/** Element visibility on the slide timeline (seconds). Drives Framer Motion `delay` / `duration` on playback. */
+export interface ElementTimelineClip {
+  start: number;
+  end: number;
+}
+
+export interface SlideTimelineSettings {
+  /** Total timeline length for the active slide (seconds). */
+  duration: number;
+}
+
 export interface EditorElement {
   id: string;
   type: ElementType;
@@ -50,6 +61,8 @@ export interface EditorElement {
   hoverStyle?: ElementHoverColors;
   responsive?: Partial<Record<ViewMode, ResponsiveElementProperties>>;
   animation?: AnimationConfig;
+  /** When set, overrides animation timing for entrance playback (Rev Slider–style timeline). */
+  timelineClip?: ElementTimelineClip;
   children?: EditorElement[]; // For nested elements (Box)
   /** True when this box was created via "Group selection" (children are not independently draggable). */
   isGroup?: boolean;
@@ -66,6 +79,7 @@ export interface Slide {
   // Legacy field for backward compatibility (optional, or can be removed if we migrate fully)
   background: string;
   elements: EditorElement[];
+  timeline?: SlideTimelineSettings;
 }
 
 export interface SliderSettings {
@@ -90,6 +104,8 @@ export interface CanvasSettings {
   showGrid: boolean;
   showRulers: boolean;
   snapToElements: boolean;
+  /** Editor-only: draw vertical + horizontal lines at canvas center (+). */
+  showCenterGuides: boolean;
   canvasWidth: number;
   canvasHeight: number;
 }

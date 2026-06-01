@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import { flushSync } from 'react-dom';
 import { ChevronLeft, ChevronRight, Crosshair, Maximize2, Minus, Plus, RotateCcw } from 'lucide-react';
 import { useEditor } from '@/context/EditorContext';
+import { useSnapGuides } from '@/context/SnapGuidesContext';
 import {
   CANVAS_ZOOM_DEFAULT,
   CANVAS_ZOOM_MAX,
@@ -35,12 +36,12 @@ const Canvas = () => {
     removeSelectedElements,
     updateElementsForMode,
     canvasSettings,
-    snapGuides,
     settings,
     propertyMode,
     setCanvasZoom,
     canvasZoom,
   } = useEditor();
+  const snapGuides = useSnapGuides();
 
   const { theme } = useTheme();
   const { t } = useLanguage();
@@ -60,6 +61,44 @@ const Canvas = () => {
     frameOriginX: 0,
     frameOriginY: 0,
   });
+  /** Photoshop-style ruler hairlines (scroll client px + slide logical px at pointer). */
+  const [rulerPointer, setRulerPointer] = useState<{
+    vx: number;
+    vy: number;
+    logicalX: number;
+    logicalY: number;
+  } | null>(null);
+
+  /** Batches pointer position to one commit per frame; avoids sync update storms with ResizeObserver + rulers. */
+  const pendingRulerPointerRef = useRef<{ vx: number; vy: number; logicalX: number; logicalY: number } | null>(null);
+  const rulerPointerRafRef = useRef<number | null>(null);
+
+  const cancelRulerPointerRaf = useCallback(() => {
+    if (rulerPointerRafRef.current != null) {
+      cancelAnimationFrame(rulerPointerRafRef.current);
+      rulerPointerRafRef.current = null;
+    }
+    pendingRulerPointerRef.current = null;
+  }, []);
+
+  const flushPendingRulerPointer = useCallback(() => {
+    rulerPointerRafRef.current = null;
+    const pending = pendingRulerPointerRef.current;
+    pendingRulerPointerRef.current = null;
+    if (!pending) return;
+    setRulerPointer((prev) => {
+      if (
+        prev &&
+        Math.abs(prev.vx - pending.vx) < 0.35 &&
+        Math.abs(prev.vy - pending.vy) < 0.35 &&
+        prev.logicalX === pending.logicalX &&
+        prev.logicalY === pending.logicalY
+      ) {
+        return prev;
+      }
+      return pending;
+    });
+  }, []);
 
   const flushRulerViewport = useCallback(() => {
     const scrollEl = scrollRef.current;
@@ -67,15 +106,73 @@ const Canvas = () => {
     if (!scrollEl || !frameEl) return;
     const sr = scrollEl.getBoundingClientRect();
     const fr = frameEl.getBoundingClientRect();
-    setRulerViewport({
+    const next = {
       scrollLeft: scrollEl.scrollLeft,
       scrollTop: scrollEl.scrollTop,
       clientWidth: scrollEl.clientWidth,
       clientHeight: scrollEl.clientHeight,
       frameOriginX: scrollEl.scrollLeft + (fr.left - sr.left),
       frameOriginY: scrollEl.scrollTop + (fr.top - sr.top),
+    };
+    const approxEq = (a: number, b: number, eps = 0.35) => Math.abs(a - b) < eps;
+    setRulerViewport((prev) => {
+      if (
+        approxEq(prev.scrollLeft, next.scrollLeft, 0.05) &&
+        approxEq(prev.scrollTop, next.scrollTop, 0.05) &&
+        prev.clientWidth === next.clientWidth &&
+        prev.clientHeight === next.clientHeight &&
+        approxEq(prev.frameOriginX, next.frameOriginX) &&
+        approxEq(prev.frameOriginY, next.frameOriginY)
+      ) {
+        return prev;
+      }
+      return next;
     });
   }, []);
+
+  const handleScrollPointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (isPlaying || !canvasSettings.showRulers) {
+        cancelRulerPointerRaf();
+        setRulerPointer(null);
+        return;
+      }
+      const scrollEl = scrollRef.current;
+      const frameEl = frameRef.current;
+      if (!scrollEl || !frameEl) return;
+      const sr = scrollEl.getBoundingClientRect();
+      const fr = frameEl.getBoundingClientRect();
+      const vx = e.clientX - sr.left;
+      const vy = e.clientY - sr.top;
+      const cw = scrollEl.clientWidth;
+      const ch = scrollEl.clientHeight;
+      if (vx < 0 || vy < 0 || vx >= cw || vy >= ch) {
+        cancelRulerPointerRaf();
+        setRulerPointer(null);
+        return;
+      }
+      const frameOriginX = scrollEl.scrollLeft + (fr.left - sr.left);
+      const frameOriginY = scrollEl.scrollTop + (fr.top - sr.top);
+      const contentX = scrollEl.scrollLeft + vx;
+      const contentY = scrollEl.scrollTop + vy;
+      const logicalX = Math.round((contentX - frameOriginX) / canvasZoom);
+      const logicalY = Math.round((contentY - frameOriginY) / canvasZoom);
+      pendingRulerPointerRef.current = { vx, vy, logicalX, logicalY };
+      rulerPointerRafRef.current ??= requestAnimationFrame(flushPendingRulerPointer);
+    },
+    [
+      cancelRulerPointerRaf,
+      canvasSettings.showRulers,
+      canvasZoom,
+      flushPendingRulerPointer,
+      isPlaying,
+    ],
+  );
+
+  const handleScrollPointerLeave = useCallback(() => {
+    cancelRulerPointerRaf();
+    setRulerPointer(null);
+  }, [cancelRulerPointerRaf]);
 
   const clampZoom = useCallback((z: number) => {
     return Math.min(CANVAS_ZOOM_MAX, Math.max(CANVAS_ZOOM_MIN, Math.round(z * 100) / 100));
@@ -227,6 +324,16 @@ const Canvas = () => {
     currentSlideIndex,
   ]);
 
+  useEffect(() => {
+    if (isPlaying || !canvasSettings.showRulers) {
+      cancelRulerPointerRaf();
+      setRulerPointer(null);
+    }
+  }, [cancelRulerPointerRaf, isPlaying, canvasSettings.showRulers]);
+
+  /** Avoid setState after unmount from deferred ruler pointer flush. */
+  useEffect(() => () => cancelRulerPointerRaf(), [cancelRulerPointerRaf]);
+
   /** Aynı moda geri dönünce yeniden ortalayabilmek için önbelleği sıfırla */
   useLayoutEffect(() => {
     centerLayoutKeyRef.current = '';
@@ -258,6 +365,21 @@ const Canvas = () => {
       requestAnimationFrame(center);
     });
   }, [viewMode, viewport.width, viewport.height, scrollClient.w, scrollClient.h]);
+
+  const fitOnLayoutKeyRef = useRef('');
+  useLayoutEffect(() => {
+    const cw = scrollClient.w;
+    const ch = scrollClient.h;
+    if (cw <= 16 || ch <= 16) return;
+
+    const key = `${viewMode}:${viewport.width}x${viewport.height}:${cw}x${ch}`;
+    if (fitOnLayoutKeyRef.current === key) return;
+    fitOnLayoutKeyRef.current = key;
+
+    queueMicrotask(() => {
+      requestAnimationFrame(() => fitCanvasToViewport());
+    });
+  }, [fitCanvasToViewport, scrollClient.w, scrollClient.h, viewMode, viewport.width, viewport.height]);
 
   useEffect(() => {
     const scrollElement = scrollRef.current;
@@ -477,16 +599,15 @@ const Canvas = () => {
 
   const cw = scrollClient.w;
   const ch = scrollClient.h;
+  /** Pan gutters (~one viewport per side); capped so scroll area cannot balloon with the scrollport. */
+  const panGutterX = cw > 16 ? Math.min(cw, Math.max(scaledWidth, 320)) : 0;
+  const panGutterY = ch > 16 ? Math.min(ch, Math.max(scaledHeight, 240)) : 0;
   const shellMinStyle: React.CSSProperties =
-    cw > 16 && ch > 16
+    panGutterX > 0 && panGutterY > 0
       ? {
-
-          minWidth: scaledWidth + CANVAS_SHELL_PAD_PX + cw * 2,
-
-          minHeight: scaledHeight + CANVAS_SHELL_PAD_PX + ch * 2,
-
+          minWidth: scaledWidth + CANVAS_SHELL_PAD_PX + panGutterX * 2,
+          minHeight: scaledHeight + CANVAS_SHELL_PAD_PX + panGutterY * 2,
         }
-
       : { minWidth: '100%', minHeight: '100%' };
 
   const showChromeRulers = !isPlaying && canvasSettings.showRulers;
@@ -495,6 +616,7 @@ const Canvas = () => {
     canvasZoom,
     logicalW: viewport.width,
     logicalH: viewport.height,
+    pointer: showChromeRulers ? rulerPointer : null,
   };
 
   return (
@@ -516,6 +638,9 @@ const Canvas = () => {
         {showChromeRulers && <CanvasViewportRulers metrics={rulerMetrics} />}
         <div
           ref={scrollRef}
+          data-msp-editor-canvas-scroll
+          onPointerMove={handleScrollPointerMove}
+          onPointerLeave={handleScrollPointerLeave}
           className={cn(
             'msp-min-h-0 msp-w-full msp-overflow-auto',
             !showChromeRulers && 'msp-flex-1',
@@ -531,10 +656,12 @@ const Canvas = () => {
         >
           <div
             ref={frameRef}
+            data-msp-editor-canvas-frame
             className="msp-relative msp-shrink-0"
             style={{ width: scaledWidth, height: scaledHeight }}
           >
             <div
+              data-msp-slide-root
               className={cn(
                 'msp-absolute msp-left-0 msp-top-0 msp-origin-top-left msp-shadow-xl msp-transition-[box-shadow,border-color] msp-duration-300 msp-overflow-hidden',
                 viewMode === 'mobile'
@@ -641,6 +768,21 @@ const Canvas = () => {
                   style={{ top: y, height: 1, backgroundColor: '#00d4ff', opacity: 0.85 }}
                 />
               ))}
+
+              {!isPlaying && canvasSettings.showCenterGuides && (
+                <>
+                  <div
+                    className="msp-absolute msp-top-0 msp-bottom-0 msp-pointer-events-none msp-z-[28] msp-w-px msp-bg-primary/80"
+                    style={{ left: viewport.width / 2 }}
+                    aria-hidden
+                  />
+                  <div
+                    className="msp-absolute msp-left-0 msp-right-0 msp-pointer-events-none msp-z-[28] msp-h-px msp-bg-primary/80"
+                    style={{ top: viewport.height / 2 }}
+                    aria-hidden
+                  />
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -649,6 +791,12 @@ const Canvas = () => {
 
       {!isPlaying && (
         <div className="msp-pointer-events-none msp-absolute msp-bottom-3 msp-right-3 msp-z-50 msp-flex msp-items-center msp-gap-1">
+          <div
+            className="msp-rounded-md msp-border msp-bg-card/95 msp-px-2 msp-py-1 msp-text-[10px] msp-font-medium msp-tabular-nums msp-text-muted-foreground msp-shadow-md msp-backdrop-blur-sm"
+            title={t('editor.canvas.slideSize')}
+          >
+            {viewport.width} × {viewport.height}
+          </div>
           <div className="msp-pointer-events-auto msp-flex msp-items-center msp-gap-0.5 msp-rounded-md msp-border msp-bg-card/95 msp-p-0.5 msp-shadow-md msp-backdrop-blur-sm">
             <Button
               type="button"

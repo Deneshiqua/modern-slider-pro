@@ -165,7 +165,7 @@ function borderStylesPatch(styleKind: string): Partial<ElementStyle> {
   };
 
   for (const key of BORDER_STYLE_KEYS) {
-    out[key] = styleKind;
+    out[key] = styleKind as NonNullable<ElementStyle[typeof key]>;
   }
 
   return out;
