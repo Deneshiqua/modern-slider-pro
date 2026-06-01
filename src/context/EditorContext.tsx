@@ -1,5 +1,5 @@
 import { CanvasSettings, EditorElement, EditorState, ElementType, ResponsivePropertyMode, Slide, SliderSettings, ViewMode } from '@/types/editor';
-import React, { ReactNode, createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
   CANVAS_ZOOM_DEFAULT,
@@ -10,6 +10,7 @@ import {
   DEFAULT_SLIDER_SETTINGS,
 } from '@/lib/constants';
 import { DEMO_SLIDES } from '@/lib/demoSlides';
+import { normalizeSliderSettings } from '@/lib/slideTransitions';
 import { getSlideSpaceOuterRect } from '@/lib/groupBounds';
 import { elementSubtreeContainsSlide } from '@/lib/elementSubtree';
 import { mergeResponsiveElementUpdates, resolveElementProperties } from '@/lib/responsive';
@@ -51,7 +52,14 @@ interface EditorContextType extends EditorState {
   setViewMode: (mode: ViewMode) => void;
   propertyMode: ResponsivePropertyMode;
   setPropertyMode: (mode: ResponsivePropertyMode) => void;
+  /** Canvas viewport + properties panel mode (desktop / tablet / mobile). */
+  setResponsiveViewport: (mode: ViewMode) => void;
   togglePlay: () => void;
+  /** Slide timeline preview (canvas entrance animations); separate from toolbar slider preview. */
+  isSlideTimelinePlaying: boolean;
+  slideTimelinePlayToken: number;
+  startSlideTimelinePreview: () => void;
+  stopSlideTimelinePreview: () => void;
   updateSlideBackground: (value: string, type: 'color' | 'image' | 'video') => void;
   updateSlideTimelineDuration: (durationSeconds: number) => void;
   bringToFront: (id: string) => void;
@@ -192,15 +200,20 @@ export const EditorProvider = ({
 }: EditorProviderProps) => {
   const [slides, setSlides] = useState<Slide[]>(initialSlides);
 
-  const [settings, setSettings] = useState<SliderSettings>(initialSettings);
+  const [settings, setSettings] = useState<SliderSettings>(() => normalizeSliderSettings(initialSettings));
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [selectedElementIds, setSelectedElementIds] = useState<string[]>([]);
   const [viewMode, setViewMode] = useState<ViewMode>('desktop');
   const [propertyMode, setPropertyMode] = useState<ResponsivePropertyMode>('default');
   const [isPlaying, setIsPlaying] = useState(false);
+  const [isSlideTimelinePlaying, setSlideTimelinePlaying] = useState(false);
+  const [slideTimelinePlayToken, setSlideTimelinePlayToken] = useState(0);
   const [showBorders, setShowBorders] = useState(false);
-  const [canvasSettings, setCanvasSettings] = useState<CanvasSettings>(initialCanvasSettings);
+  const [canvasSettings, setCanvasSettings] = useState<CanvasSettings>(() => ({
+    ...DEFAULT_CANVAS_SETTINGS,
+    ...initialCanvasSettings,
+  }));
   const [canvasZoom, setCanvasZoomState] = useState(CANVAS_ZOOM_DEFAULT);
   const [layersDrillParentId, setLayersDrillParentId] = useState<string | null>(null);
 
@@ -222,6 +235,15 @@ export const EditorProvider = ({
   const resetCanvasZoom = () => {
     setCanvasZoomState(CANVAS_ZOOM_DEFAULT);
   };
+
+  const startSlideTimelinePreview = useCallback(() => {
+    setSlideTimelinePlayToken((t) => t + 1);
+    setSlideTimelinePlaying(true);
+  }, []);
+
+  const stopSlideTimelinePreview = useCallback(() => {
+    setSlideTimelinePlaying(false);
+  }, []);
   const [isDirty, setIsDirty] = useState(false);
   /** Full-project snapshots for settings, canvas, add/remove slide, loadSlides, etc. */
   const [globalPastSnapshots, setGlobalPastSnapshots] = useState<EditorSnapshot[]>([]);
@@ -270,7 +292,7 @@ export const EditorProvider = ({
 
     setSlides(snapshot.slides);
     setSettings(snapshot.settings);
-    setCanvasSettings(snapshot.canvasSettings);
+    setCanvasSettings({ ...DEFAULT_CANVAS_SETTINGS, ...snapshot.canvasSettings });
     navigateToSlide((index) => Math.min(index, Math.max(snapshot.slides.length - 1, 0)));
 
     const nextIds = nextSlide
@@ -1095,7 +1117,26 @@ export const EditorProvider = ({
     setViewMode,
     propertyMode,
     setPropertyMode,
-    togglePlay: () => setIsPlaying(!isPlaying),
+    setResponsiveViewport: (mode: ViewMode) => {
+      setViewMode(mode);
+      setPropertyMode(mode);
+    },
+    togglePlay: () => {
+      setIsPlaying((prev) => {
+        const next = !prev;
+        if (next) {
+          setSlideTimelinePlayToken((t) => t + 1);
+          setSlideTimelinePlaying(true);
+        } else {
+          setSlideTimelinePlaying(false);
+        }
+        return next;
+      });
+    },
+    isSlideTimelinePlaying,
+    slideTimelinePlayToken,
+    startSlideTimelinePreview,
+    stopSlideTimelinePreview,
     updateSlideBackground,
     updateSlideTimelineDuration,
     bringToFront,
@@ -1133,6 +1174,8 @@ export const EditorProvider = ({
     viewMode,
     propertyMode,
     isPlaying,
+    isSlideTimelinePlaying,
+    slideTimelinePlayToken,
     showBorders,
     canvasSettings,
     canvasZoom,
@@ -1191,7 +1234,12 @@ export const useEditor = () => {
       setViewMode: () => { },
       propertyMode: 'default',
       setPropertyMode: () => { },
+      setResponsiveViewport: () => { },
       togglePlay: () => { },
+      isSlideTimelinePlaying: false,
+      slideTimelinePlayToken: 0,
+      startSlideTimelinePreview: () => { },
+      stopSlideTimelinePreview: () => { },
       updateSlideBackground: () => { },
       updateSlideTimelineDuration: () => { },
       bringToFront: () => { },

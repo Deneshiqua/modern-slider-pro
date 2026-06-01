@@ -203,6 +203,18 @@ Portals attach to ``document.body`` with high **z-index** values (near **100 0
 
 ## Changelog
 
+### 0.5.0 — 2026-06-01
+- **Added**: **Slide timeline** — per-element entrance clips on a slide timeline (drag, trim, play / pause / stop, slide duration, Ctrl/Cmd + scroll to zoom the track).
+- **Added**: **Slide transitions** — fade, slide, slide up, and zoom between slides in **Slider settings**; `SliderRunner` and editor preview use `settings.slideTransition` / `slideTransitionDuration`.
+- **Added**: **Timeline panel toggle** — `canvasSettings.showTimeline` (toolbar **Timeline settings**); hide the panel while keeping the canvas layout; preview animations still run via a headless playback controller.
+- **Added**: `setResponsiveViewport()` on the editor context — desktop / tablet / mobile toolbar buttons update both canvas view and properties mode together.
+- **Added**: `CanvasViewportContext` — fit-to-viewport and center-canvas actions for the canvas zoom bar.
+- **Improved**: Toolbar **Preview** stays in sync with the timeline playhead and loops element entrance animations on the active slide.
+- **Improved**: Canvas zoom — fit / center on the bottom bar; viewport centering uses the visible scrollport; auto-fit on view / layout changes.
+- **Improved**: Rulers remain available during preview (no longer forced off when playing).
+- **Fixed**: Top bar **desktop / tablet / mobile** buttons not responding (overlay hit area / z-index).
+- **Removed**: Duplicate fit / center controls from the top toolbar (kept on the canvas zoom bar).
+
 ### 0.4.0 — 2026-05-20
 - **Fixed**: Elements lagging behind the cursor while dragging — position now follows **slide-space pointer** math (same as rulers), not `react-rnd` scaled deltas alone; grab offset preserved for nested layers.
 - **Fixed**: Janky drag when **snap to elements** was on — snapping applies on **release** only; guide lines still show during drag.

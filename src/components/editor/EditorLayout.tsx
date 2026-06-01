@@ -5,6 +5,8 @@ import { toast, Toaster } from 'sonner';
 import Canvas from './Canvas';
 import { EditorProvider, useEditor } from '@/context/EditorContext';
 import LayerPanel from './LayerPanel';
+import { CanvasViewportProvider } from '@/context/CanvasViewportContext';
+import { SlideTimelinePlaybackProvider } from '@/context/SlideTimelinePlaybackContext';
 import { SnapGuidesProvider } from '@/context/SnapGuidesContext';
 import { Language } from '@/lib/translations';
 import { LanguageProvider, TranslationDictionary, useLanguage, type TranslationKey } from '@/context/LanguageContext';
@@ -104,6 +106,7 @@ const EditorShell = ({
   const {
     canRedo,
     canUndo,
+    canvasSettings,
     isDirty,
     isPlaying,
     redo,
@@ -113,6 +116,8 @@ const EditorShell = ({
     pasteClipboardElements,
     selectAllRootElements,
   } = useEditor();
+
+  const showTimeline = canvasSettings.showTimeline !== false;
 
   useDirtyReloadGuard(isDirty, t);
 
@@ -217,13 +222,26 @@ const EditorShell = ({
             className="msp-flex msp-h-full msp-min-h-0 msp-min-w-0 msp-flex-col msp-overflow-hidden"
           >
             <ResizablePanelGroup direction="vertical" className="msp-h-full msp-min-h-0">
-              <ResizablePanel defaultSize={72} minSize={40} className="msp-min-h-0">
+              <ResizablePanel
+                defaultSize={showTimeline ? 72 : 100}
+                minSize={showTimeline ? 40 : 100}
+                className="msp-flex msp-min-h-0 msp-flex-col msp-overflow-hidden"
+              >
                 <Canvas />
               </ResizablePanel>
-              <ResizableHandle withHandle />
-              <ResizablePanel defaultSize={28} minSize={15} maxSize={45} className="msp-min-h-0">
-                <TimelinePanelSlot />
-              </ResizablePanel>
+              {showTimeline && (
+                <>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel
+                    defaultSize={28}
+                    minSize={15}
+                    maxSize={45}
+                    className="msp-min-h-0 msp-overflow-hidden"
+                  >
+                    <TimelinePanelSlot />
+                  </ResizablePanel>
+                </>
+              )}
             </ResizablePanelGroup>
           </ResizablePanel>
 
@@ -295,6 +313,8 @@ const EditorLayout = ({
             initialCanvasSettings={initialCanvasSettings}
           >
             <SnapGuidesProvider>
+            <CanvasViewportProvider>
+            <SlideTimelinePlaybackProvider>
             <TooltipProvider>
               <EditorShell
                 onDemoSave={onDemoSave}
@@ -304,6 +324,8 @@ const EditorLayout = ({
                 className={className}
               />
             </TooltipProvider>
+            </SlideTimelinePlaybackProvider>
+            </CanvasViewportProvider>
             </SnapGuidesProvider>
           </EditorProvider>
         </PublishedSlidesProvider>

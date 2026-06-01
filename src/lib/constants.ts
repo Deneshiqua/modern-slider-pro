@@ -15,6 +15,8 @@ export const DEFAULT_SLIDER_SETTINGS: SliderSettings = {
   loop: true,
   showArrows: true,
   showDots: true,
+  slideTransition: 'fade',
+  slideTransitionDuration: 0.5,
 };
 
 export const VIEWPORT_SIZE = {
@@ -48,6 +50,7 @@ export const DEFAULT_CANVAS_SETTINGS: CanvasSettings = {
   showRulers: true,
   snapToElements: true,
   showCenterGuides: false,
+  showTimeline: true,
   canvasWidth: 1280,
   canvasHeight: 720,
 };

@@ -7,7 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Group, LayoutGrid, Monitor, Play, Plus, Redo2, RotateCcw, Save, Settings, SlidersHorizontal, Smartphone, Square, Tablet, Terminal, Undo2, Ungroup, Upload } from 'lucide-react';
+import { Group, LayoutGrid, Monitor, PanelBottom, Play, Plus, Redo2, RotateCcw, Save, Settings, SlidersHorizontal, Smartphone, Square, Tablet, Terminal, Undo2, Ungroup, Upload } from 'lucide-react';
 import React, { useState } from 'react';
 import {
   Tooltip,
@@ -19,8 +19,17 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Slider as SliderInput } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
+import { normalizeSliderSettings, SLIDE_TRANSITION_OPTIONS } from '@/lib/slideTransitions';
+import type { SlideTransitionType } from '@/types/editor';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import { useEditor } from '@/context/EditorContext';
@@ -59,7 +68,7 @@ const LANGUAGE_OPTIONS = [
 const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
   const {
     viewMode,
-    setViewMode,
+    setResponsiveViewport,
     currentSlideIndex,
     isPlaying,
     togglePlay,
@@ -79,7 +88,6 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
     undo,
     redo,
     resetActiveSlide,
-    setPropertyMode,
     selectedElementId,
     selectedElementIds,
     groupSelectedElements,
@@ -96,6 +104,7 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
   const [isTestOpen, setIsTestOpen] = useState(false);
   const [isSliderSettingsOpen, setIsSliderSettingsOpen] = useState(false);
   const [isCanvasSettingsOpen, setIsCanvasSettingsOpen] = useState(false);
+  const [isTimelineSettingsOpen, setIsTimelineSettingsOpen] = useState(false);
   const GRID_PRESETS = [10, 20, 25, 50, 100];
   const [showCustomGrid, setShowCustomGrid] = useState(false);
   /** User chose "Özel" so width/height fields are shown; cleared when picking a preset. */
@@ -139,7 +148,7 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
 
       if (isSliderProject(parsedValue)) {
         loadSlides(parsedValue.slides);
-        updateSettings(parsedValue.settings ?? {});
+        updateSettings(normalizeSliderSettings(parsedValue.settings));
         updateCanvasSettings(parsedValue.canvasSettings ?? {});
         setIsTestOpen(false);
         setJsonInput('');
@@ -253,7 +262,7 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
         </div>
       </div>
 
-      <div className="msp-pointer-events-none msp-absolute msp-inset-0 msp-flex msp-items-center msp-justify-center">
+      <div className="msp-pointer-events-none msp-absolute msp-inset-0 msp-z-20 msp-flex msp-items-center msp-justify-center">
         <div className="msp-pointer-events-auto msp-flex msp-items-center msp-rounded-md msp-bg-secondary msp-p-1">
           <TooltipProvider>
             <Tooltip>
@@ -261,10 +270,7 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
                 <Button
                   variant={viewMode === 'desktop' ? 'default' : 'ghost'}
                   size="sm"
-                  onClick={() => {
-                    setViewMode('desktop');
-                    setPropertyMode('desktop');
-                  }}
+                  onClick={() => setResponsiveViewport('desktop')}
                 >
                   <Monitor className="msp-h-4 msp-w-4" />
                 </Button>
@@ -279,10 +285,7 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
                 <Button
                   variant={viewMode === 'tablet' ? 'default' : 'ghost'}
                   size="sm"
-                  onClick={() => {
-                    setViewMode('tablet');
-                    setPropertyMode('tablet');
-                  }}
+                  onClick={() => setResponsiveViewport('tablet')}
                 >
                   <Tablet className="msp-h-4 msp-w-4" />
                 </Button>
@@ -297,10 +300,7 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
                 <Button
                   variant={viewMode === 'mobile' ? 'default' : 'ghost'}
                   size="sm"
-                  onClick={() => {
-                    setViewMode('mobile');
-                    setPropertyMode('mobile');
-                  }}
+                  onClick={() => setResponsiveViewport('mobile')}
                 >
                   <Smartphone className="msp-h-4 msp-w-4" />
                 </Button>
@@ -511,6 +511,43 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
           </PopoverContent>
         </Popover>
 
+        <Popover modal={false} open={isTimelineSettingsOpen} onOpenChange={setIsTimelineSettingsOpen}>
+          <PopoverTrigger asChild>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              title={t('editor.toolbar.tooltipTimelineSettings')}
+              aria-label={t('editor.toolbar.tooltipTimelineSettings')}
+            >
+              <PanelBottom className="msp-h-5 msp-w-5" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent align="end" className="msp-max-w-sm msp-w-[min(calc(100vw-2rem),24rem)] msp-p-4">
+            <div className="msp-space-y-1.5 msp-border-b msp-pb-3 msp-mb-1">
+              <h2 className="msp-text-base msp-font-semibold msp-leading-none">
+                {t('editor.toolbar.timelineSettingsTitle')}
+              </h2>
+              <p className="msp-text-sm msp-text-muted-foreground">
+                {t('editor.toolbar.timelineSettingsDesc')}
+              </p>
+            </div>
+            <div className="msp-flex msp-items-center msp-justify-between msp-pt-3">
+              <div>
+                <Label htmlFor="tb-show-timeline">{t('editor.toolbar.showTimeline')}</Label>
+                <p className="msp-text-xs msp-text-muted-foreground msp-mt-0.5">
+                  {t('editor.toolbar.showTimelineHint')}
+                </p>
+              </div>
+              <Switch
+                id="tb-show-timeline"
+                checked={canvasSettings.showTimeline !== false}
+                onCheckedChange={(checked) => updateCanvasSettings({ showTimeline: checked })}
+              />
+            </div>
+          </PopoverContent>
+        </Popover>
+
         <Popover modal={false} open={isSliderSettingsOpen} onOpenChange={setIsSliderSettingsOpen}>
           <PopoverTrigger asChild>
             <Button
@@ -576,6 +613,44 @@ const Toolbar = ({ onDemoSave, onSave, saveButtonLabel }: ToolbarProps) => {
                   checked={settings.showDots}
                   onCheckedChange={(checked) => updateSettings({ showDots: checked })}
                 />
+              </div>
+              <div className="msp-space-y-2 msp-border-t msp-pt-4">
+                <Label className="msp-text-xs">{t('editor.slideTransition.label')}</Label>
+                <Select
+                  value={settings.slideTransition}
+                  onValueChange={(value) =>
+                    updateSettings({ slideTransition: value as SlideTransitionType })
+                  }
+                >
+                  <SelectTrigger id="tb-slideTransition" className="msp-h-8 msp-text-xs">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SLIDE_TRANSITION_OPTIONS.map((opt) => (
+                      <SelectItem key={opt.value} value={opt.value} className="msp-text-xs">
+                        {t(opt.labelKey)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {settings.slideTransition !== 'none' && (
+                  <div className="msp-space-y-1.5">
+                    <Label className="msp-text-xs">{t('editor.slideTransition.duration')}</Label>
+                    <div className="msp-flex msp-items-center msp-gap-3">
+                      <SliderInput
+                        value={[settings.slideTransitionDuration]}
+                        min={0.1}
+                        max={2}
+                        step={0.1}
+                        onValueChange={([val]) => updateSettings({ slideTransitionDuration: val })}
+                        className="msp-flex-1"
+                      />
+                      <span className="msp-w-10 msp-text-right msp-text-sm msp-tabular-nums">
+                        {settings.slideTransitionDuration.toFixed(1)}s
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </PopoverContent>

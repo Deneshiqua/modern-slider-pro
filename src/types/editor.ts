@@ -82,12 +82,18 @@ export interface Slide {
   timeline?: SlideTimelineSettings;
 }
 
+export type SlideTransitionType = 'none' | 'fade' | 'slide' | 'slideUp' | 'zoom';
+
 export interface SliderSettings {
   autoPlay: boolean;
   interval: number; // seconds
   loop: boolean;
   showArrows: boolean;
   showDots: boolean;
+  /** Transition when changing slides (preview + SliderRunner). */
+  slideTransition: SlideTransitionType;
+  /** Transition length in seconds. */
+  slideTransitionDuration: number;
 }
 
 export interface SliderProject {
@@ -106,6 +112,8 @@ export interface CanvasSettings {
   snapToElements: boolean;
   /** Editor-only: draw vertical + horizontal lines at canvas center (+). */
   showCenterGuides: boolean;
+  /** Editor-only: show slide animation timeline panel below the canvas. */
+  showTimeline: boolean;
   canvasWidth: number;
   canvasHeight: number;
 }

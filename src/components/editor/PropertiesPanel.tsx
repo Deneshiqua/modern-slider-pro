@@ -40,7 +40,7 @@ const PropertiesPanel = () => {
     sendBackward,
     propertyMode,
     setPropertyMode,
-    setViewMode,
+    setResponsiveViewport,
   } = useEditor();
   const { t } = useLanguage();
 
@@ -80,7 +80,7 @@ const PropertiesPanel = () => {
     setPropertyMode(mode);
 
     if (mode !== 'default') {
-      setViewMode(mode);
+      setResponsiveViewport(mode);
     }
   };
 

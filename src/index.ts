@@ -37,6 +37,7 @@ export type {
     SliderProject,
     SliderEditorSavePayload,
     SliderSettings,
+    SlideTransitionType,
     CanvasSettings,
     AnimationConfig,
     ViewMode,
@@ -57,3 +58,9 @@ export {
     VIEWPORT_SIZE,
     ANIMATION_PRESETS,
 } from './lib/constants';
+export {
+    SLIDE_TRANSITION_OPTIONS,
+    normalizeSliderSettings,
+    resolveSlideTransitionMotion,
+} from './lib/slideTransitions';
+export type { SlideTransitionDirection } from './lib/slideTransitions';

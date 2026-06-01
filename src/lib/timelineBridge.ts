@@ -10,6 +10,8 @@ export interface MspTimelineAction {
   effectId: string;
   flexible?: boolean;
   movable?: boolean;
+  minStart?: number;
+  maxEnd?: number;
 }
 
 export interface MspTimelineRow {
@@ -77,8 +79,10 @@ export function slideElementsToTimelineRows(slide: Slide): MspTimelineRow[] {
           start,
           end,
           effectId: MSP_TIMELINE_EFFECTS.entrance.id,
-          flexible: false,
+          flexible: true,
           movable: true,
+          minStart: 0,
+          maxEnd,
         } satisfies MspTimelineAction,
       ],
     } satisfies MspTimelineRow;
