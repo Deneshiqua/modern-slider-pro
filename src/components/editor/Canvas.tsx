@@ -16,6 +16,7 @@ import { CANVAS_RULER_THICKNESS_PX, CanvasViewportRulers } from './CanvasViewpor
 import { cn } from '@/lib/utils';
 import { resolveElementProperties } from '@/lib/responsive';
 import {
+  getEffectiveSlideTransition,
   resolveSlideTransitionMotion,
   type SlideTransitionDirection,
 } from '@/lib/slideTransitions';
@@ -23,6 +24,20 @@ import { useTheme } from '@/context/ThemeContext';
 import { useCanvasViewport } from '@/context/CanvasViewportContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { Button } from '@/components/ui/button';
+import { SlideOverlayLayer } from '@/components/SlideOverlayLayer';
+import { SliderProgressBar } from '@/components/SliderProgressBar';
+import { useSlideTimelinePlayback } from '@/context/SlideTimelinePlaybackContext';
+import {
+  getSlideBackgroundFit,
+  getSlideBackgroundImageUrl,
+  getSlideBackgroundVideoUrl,
+  getSlideImageBackgroundCss,
+  getSlideVideoObjectFitClass,
+  getSlideYoutubeIframeClassName,
+  getYoutubeEmbedUrl,
+  isYoutubeBackgroundUrl,
+} from '@/lib/slideBackground';
+import { getSlideAutoplayDwellSeconds, shouldRunSliderAutoplay } from '@/lib/timelineBridge';
 
 /** Matches `msp-p-4` — included in shell min dimensions for scroll/pan gutters. */
 const CANVAS_SHELL_PAD_PX = 32;
@@ -49,7 +64,18 @@ const Canvas = () => {
     setCanvasZoom,
     canvasZoom,
   } = useEditor();
+  const { autoplayPausedByHover, setAutoplayPausedByHover } = useSlideTimelinePlayback();
   const isCanvasPreview = isPlaying || isSlideTimelinePlaying;
+
+  const handleSliderPreviewMouseEnter = useCallback(() => {
+    if (isPlaying && settings.autoPlay) {
+      setAutoplayPausedByHover(true);
+    }
+  }, [isPlaying, settings.autoPlay, setAutoplayPausedByHover]);
+
+  const handleSliderPreviewMouseLeave = useCallback(() => {
+    setAutoplayPausedByHover(false);
+  }, [setAutoplayPausedByHover]);
   const [slideTransitionDirection, setSlideTransitionDirection] = useState<SlideTransitionDirection>(1);
   const snapGuides = useSnapGuides();
   const { register: registerCanvasViewport } = useCanvasViewport();
@@ -495,26 +521,6 @@ const Canvas = () => {
     [currentSlideIndex, setCurrentSlide, slides.length],
   );
 
-  // Autoplay in preview mode
-  useEffect(() => {
-    if (!isPlaying || !settings.autoPlay || slides.length <= 1) return;
-    const interval = setInterval(() => {
-      const next = settings.loop
-        ? (currentSlideIndex + 1) % slides.length
-        : Math.min(currentSlideIndex + 1, slides.length - 1);
-      navigateToSlide(next, 1);
-    }, (settings.interval ?? 5) * 1000);
-    return () => clearInterval(interval);
-  }, [
-    isPlaying,
-    settings.autoPlay,
-    settings.loop,
-    settings.interval,
-    currentSlideIndex,
-    slides.length,
-    navigateToSlide,
-  ]);
-
   const goNext = () => {
     const next = settings.loop
       ? (currentSlideIndex + 1) % slides.length
@@ -600,31 +606,14 @@ const Canvas = () => {
     selectElement(null);
   };
 
-  const getEmbedUrl = (url: string) => {
-    if (!url) return '';
-    try {
-      if (url.includes('youtube.com/watch')) {
-        const urlObj = new URL(url);
-        const videoId = urlObj.searchParams.get('v');
-        return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}`;
-      } else if (url.includes('youtu.be')) {
-        const videoId = url.split('/').pop();
-        return `https://www.youtube.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}`;
-      }
-      return url;
-    } catch {
-      return url;
-    }
-  };
-
   const getBackgroundStyle = (): React.CSSProperties => {
     if (!currentSlide) return { backgroundColor: '#fff' };
 
+    const fit = getSlideBackgroundFit(currentSlide);
     const style: React.CSSProperties = {
       width: viewport.width,
       height: viewport.height,
-      backgroundSize: 'cover',
-      backgroundPosition: 'center',
+      ...getSlideImageBackgroundCss(fit),
     };
 
     if (currentSlide.backgroundType === 'color') {
@@ -634,7 +623,8 @@ const Canvas = () => {
         style.backgroundColor = currentSlide.background;
       }
     } else if (currentSlide.backgroundType === 'image') {
-      style.backgroundImage = `url(${currentSlide.background})`;
+      const imageUrl = getSlideBackgroundImageUrl(currentSlide);
+      if (imageUrl) style.backgroundImage = `url(${imageUrl})`;
     } else if (currentSlide.backgroundType === 'video') {
       style.backgroundColor = '#000';
     }
@@ -670,26 +660,38 @@ const Canvas = () => {
       ? 'msp-border-[8px] msp-border-gray-800 msp-rounded-[30px]'
       : 'msp-border msp-border-gray-300 dark:msp-border-gray-700',
   );
+  const slideShellStyle: React.CSSProperties = {
+    width: viewport.width,
+    height: viewport.height,
+    transform: `scale(${canvasZoom})`,
+  };
   const slideRootStyle: React.CSSProperties = {
     ...getBackgroundStyle(),
-    transform: `scale(${canvasZoom})`,
+    ...slideShellStyle,
   };
   const slideMotion = isPlaying
     ? resolveSlideTransitionMotion(
-        settings.slideTransition,
+        getEffectiveSlideTransition(settings),
         settings.slideTransitionDuration,
         slideTransitionDirection,
       )
     : null;
 
-  const slideScene = (
+  const lastSlideIndexForTransitionRef = useRef(currentSlideIndex);
+  const shouldAnimateSlideTransition =
+    Boolean(isPlaying && slideMotion && lastSlideIndexForTransitionRef.current !== currentSlideIndex);
+  useLayoutEffect(() => {
+    lastSlideIndexForTransitionRef.current = currentSlideIndex;
+  }, [currentSlideIndex]);
+
+  const slideSlideContent = (
     <>
-      {currentSlide?.backgroundType === 'video' && currentSlide.background && (
-        <div className="msp-absolute msp-inset-0 msp-z-0 msp-overflow-hidden msp-pointer-events-none">
-          {currentSlide.background.includes('youtube') || currentSlide.background.includes('youtu.be') ? (
+      {currentSlide?.backgroundType === 'video' && getSlideBackgroundVideoUrl(currentSlide) && (
+        <div className="msp-absolute msp-inset-0 msp-z-0 msp-overflow-hidden msp-pointer-events-none msp-flex msp-items-center msp-justify-center">
+          {isYoutubeBackgroundUrl(getSlideBackgroundVideoUrl(currentSlide)!) ? (
             <iframe
-              src={getEmbedUrl(currentSlide.background)}
-              className="msp-w-full msp-h-full msp-object-cover msp-scale-150"
+              src={getYoutubeEmbedUrl(getSlideBackgroundVideoUrl(currentSlide)!)}
+              className={getSlideYoutubeIframeClassName(getSlideBackgroundFit(currentSlide))}
               style={{ pointerEvents: 'none' }}
               frameBorder="0"
               allow="autoplay; encrypted-media"
@@ -698,8 +700,8 @@ const Canvas = () => {
             />
           ) : (
             <video
-              src={currentSlide.background}
-              className="msp-w-full msp-h-full msp-object-cover"
+              src={getSlideBackgroundVideoUrl(currentSlide)}
+              className={`msp-h-full msp-w-full ${getSlideVideoObjectFitClass(getSlideBackgroundFit(currentSlide))}`}
               autoPlay
               loop
               muted
@@ -710,12 +712,14 @@ const Canvas = () => {
         </div>
       )}
 
+      {currentSlide ? <SlideOverlayLayer slide={currentSlide} /> : null}
+
       <div className="msp-absolute msp-inset-0 msp-z-10">
         {currentSlide?.elements.filter(element => element.isVisible !== false).map((element) => (
           <DraggableElement
             key={
-              isSlideTimelinePlaying
-                ? `${element.id}-tl-${slideTimelinePlayToken}`
+              isCanvasPreview
+                ? `${element.id}-pv-${slideTimelinePlayToken}`
                 : element.id
             }
             element={element}
@@ -723,39 +727,85 @@ const Canvas = () => {
           />
         ))}
       </div>
+    </>
+  );
 
-      {isPlaying && settings.showArrows && (
+  const showSliderNavChrome = slides.length > 1;
+  const showSliderProgressChrome =
+    settings.showProgressBar &&
+    shouldRunSliderAutoplay(slides.length, settings.autoPlay, settings.loop);
+
+  const sliderChrome =
+    showSliderNavChrome || showSliderProgressChrome ? (
+    <>
+      {showSliderNavChrome && settings.showArrows && (
         <>
           <div
-            className="msp-absolute msp-left-3 msp-top-1/2 -msp-translate-y-1/2 msp-z-40 msp-bg-black/30 msp-text-white msp-rounded-full msp-p-1.5 msp-opacity-60 msp-cursor-pointer hover:msp-opacity-90"
-            onClick={goPrev}
+            className="msp-absolute msp-left-3 msp-top-1/2 msp-z-50 -msp-translate-y-1/2 msp-cursor-pointer msp-rounded-full msp-bg-black/40 msp-p-1.5 msp-text-white msp-opacity-80 msp-shadow-sm hover:msp-bg-black/55 hover:msp-opacity-100"
+            onClick={(e) => {
+              e.stopPropagation();
+              goPrev();
+            }}
           >
             <ChevronLeft className="msp-w-5 msp-h-5" />
           </div>
           <div
-            className="msp-absolute msp-right-3 msp-top-1/2 -msp-translate-y-1/2 msp-z-40 msp-bg-black/30 msp-text-white msp-rounded-full msp-p-1.5 msp-opacity-60 msp-cursor-pointer hover:msp-opacity-90"
-            onClick={goNext}
+            className="msp-absolute msp-right-3 msp-top-1/2 msp-z-50 -msp-translate-y-1/2 msp-cursor-pointer msp-rounded-full msp-bg-black/40 msp-p-1.5 msp-text-white msp-opacity-80 msp-shadow-sm hover:msp-bg-black/55 hover:msp-opacity-100"
+            onClick={(e) => {
+              e.stopPropagation();
+              goNext();
+            }}
           >
             <ChevronRight className="msp-w-5 msp-h-5" />
           </div>
         </>
       )}
 
-      {isPlaying && settings.showDots && (
-        <div className="msp-absolute msp-bottom-3 msp-left-1/2 -msp-translate-x-1/2 msp-flex msp-gap-1.5 msp-z-40">
+      {showSliderNavChrome && settings.showDots && (
+        <div className="msp-absolute msp-bottom-3 msp-left-1/2 msp-z-50 msp-flex -msp-translate-x-1/2 msp-gap-1.5">
           {slides.map((_, idx) => (
             <div
               key={idx}
-              onClick={() => navigateToSlide(idx)}
+              onClick={(e) => {
+                e.stopPropagation();
+                navigateToSlide(idx);
+              }}
               className={cn(
-                'msp-rounded-full msp-transition-colors msp-cursor-pointer hover:msp-bg-white',
-                idx === currentSlideIndex ? 'msp-w-2.5 msp-h-2.5 msp-bg-white' : 'msp-w-2 msp-h-2 msp-bg-white/50',
+                'msp-cursor-pointer msp-rounded-full msp-shadow-sm msp-transition-colors',
+                idx === currentSlideIndex
+                  ? 'msp-h-2.5 msp-w-2.5 msp-bg-white msp-ring-1 msp-ring-black/30'
+                  : 'msp-h-2 msp-w-2 msp-bg-white/70 hover:msp-bg-white',
               )}
             />
           ))}
         </div>
       )}
 
+      {showSliderProgressChrome && (
+        <SliderProgressBar
+          currentIndex={currentSlideIndex}
+          slideCount={slides.length}
+          scope={settings.progressBarScope}
+          autoPlay={isPlaying && settings.autoPlay}
+          paused={autoplayPausedByHover}
+          loop={settings.loop}
+          cycleKey={slideTimelinePlayToken}
+          intervalMs={
+            currentSlide
+              ? getSlideAutoplayDwellSeconds(currentSlide, settings.interval ?? 5) * 1000
+              : (settings.interval ?? 5) * 1000
+          }
+          color={settings.progressBarColor}
+          fillOpacity={settings.progressBarOpacity}
+          trackOpacity={settings.progressBarTrackOpacity}
+          heightPx={settings.progressBarHeight}
+        />
+      )}
+    </>
+  ) : null;
+
+  const editorChrome = (
+    <>
       {!isCanvasPreview && canvasSettings.showGrid && (
         <div
           className="msp-absolute msp-inset-0 msp-pointer-events-none msp-opacity-10 msp-z-20"
@@ -842,21 +892,29 @@ const Canvas = () => {
             style={{ width: scaledWidth, height: scaledHeight }}
           >
             {isPlaying && currentSlide && slideMotion ? (
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={currentSlide.id}
-                  data-msp-slide-root
-                  className={slideRootClassName}
-                  style={slideRootStyle}
-                  onClick={handleBackgroundClick}
-                  initial={slideMotion.initial}
-                  animate={slideMotion.animate}
-                  exit={slideMotion.exit}
-                  transition={slideMotion.transition}
-                >
-                  {slideScene}
-                </motion.div>
-              </AnimatePresence>
+              <div
+                data-msp-slide-root
+                className={slideRootClassName}
+                style={slideShellStyle}
+                onClick={handleBackgroundClick}
+                onMouseEnter={handleSliderPreviewMouseEnter}
+                onMouseLeave={handleSliderPreviewMouseLeave}
+              >
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={currentSlide.id}
+                    className="msp-absolute msp-inset-0 msp-h-full msp-w-full"
+                    style={getBackgroundStyle()}
+                    initial={shouldAnimateSlideTransition ? slideMotion.initial : false}
+                    animate={slideMotion.animate}
+                    exit={slideMotion.exit}
+                    transition={slideMotion.transition}
+                  >
+                    {slideSlideContent}
+                  </motion.div>
+                </AnimatePresence>
+                {sliderChrome}
+              </div>
             ) : (
               <div
                 data-msp-slide-root
@@ -864,7 +922,9 @@ const Canvas = () => {
                 style={slideRootStyle}
                 onClick={handleBackgroundClick}
               >
-                {slideScene}
+                {slideSlideContent}
+                {sliderChrome}
+                {editorChrome}
               </div>
             )}
           </div>

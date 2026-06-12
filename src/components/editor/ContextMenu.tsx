@@ -1,5 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ContextMenu as UIContextMenu, ContextMenuContent, ContextMenuItem, ContextMenuSeparator, ContextMenuTrigger } from '@/components/ui/context-menu';
+import {
+  ContextMenu as ContextMenuRoot,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 import {
   Dialog,
   DialogContent,
@@ -41,12 +47,12 @@ function elementDefaultLabel(el: EditorElement): string {
   return el.type.charAt(0).toUpperCase() + el.type.slice(1);
 }
 
-interface ContextMenuProps {
+interface ElementContextMenuProps {
   children: React.ReactNode;
   elementId?: string;
 }
 
-const ContextMenu = ({ children, elementId }: ContextMenuProps) => {
+const ContextMenu = ({ children, elementId }: ElementContextMenuProps) => {
   const {
     removeElement,
     removeSelectedElements,
@@ -93,7 +99,8 @@ const ContextMenu = ({ children, elementId }: ContextMenuProps) => {
     if (!elementId || !targetElement) return;
     const label = targetElement.name?.trim() || elementDefaultLabel(targetElement);
     setRenameDraft(label);
-    setRenameOpen(true);
+    // Defer dialog until after Radix closes the menu on select (avoids overlap / focus trap).
+    globalThis.setTimeout(() => setRenameOpen(true), 0);
   };
 
   const handleConfirmRename = () => {
@@ -138,13 +145,14 @@ const ContextMenu = ({ children, elementId }: ContextMenuProps) => {
 
   return (
     <>
-      <UIContextMenu>
+      <ContextMenuRoot>
         <ContextMenuTrigger>
           {/* Wrapper to ensure ref is passed correctly and events are captured */}
           <span className="msp-block" style={{ display: 'contents' }}>
             {children}
           </span>
         </ContextMenuTrigger>
+        {!renameOpen && (
         <ContextMenuContent className="msp-w-64">
           {canGroup && (
             <ContextMenuItem onClick={groupSelectedElements}>
@@ -180,12 +188,7 @@ const ContextMenu = ({ children, elementId }: ContextMenuProps) => {
             <Maximize className="msp-mr-2 msp-h-4 msp-w-4" />
             {t('editor.contextMenu.fit')}
           </ContextMenuItem>
-          <ContextMenuItem
-            onSelect={(event) => {
-              event.preventDefault();
-              handleOpenRename();
-            }}
-          >
+          <ContextMenuItem onSelect={handleOpenRename}>
             <Pencil className="msp-mr-2 msp-h-4 msp-w-4" />
             {t('editor.contextMenu.rename')}
           </ContextMenuItem>
@@ -199,7 +202,8 @@ const ContextMenu = ({ children, elementId }: ContextMenuProps) => {
             {t('editor.contextMenu.delete')}
           </ContextMenuItem>
         </ContextMenuContent>
-      </UIContextMenu>
+        )}
+      </ContextMenuRoot>
 
       <Dialog open={renameOpen} onOpenChange={setRenameOpen}>
         <DialogContent className="msp-max-w-md" onCloseAutoFocus={(e) => e.preventDefault()}>

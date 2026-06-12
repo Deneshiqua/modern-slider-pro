@@ -68,12 +68,22 @@ export interface EditorElement {
   isGroup?: boolean;
 }
 
+/** Image/video background sizing: cover (fill crop), contain (fit), fill (stretch), none (natural). */
+export type SlideBackgroundFit = 'cover' | 'contain' | 'fill' | 'none';
+
 export interface Slide {
   id: string;
   // Store separate values for each background type
   backgroundColor: string;
   backgroundImage: string;
   backgroundVideo: string;
+  /** How image/video backgrounds fill the slide. Defaults to `cover`. */
+  backgroundFit?: SlideBackgroundFit;
+  /** Tint layer over the background (below slide elements). */
+  overlayEnabled?: boolean;
+  overlayColor?: string;
+  /** 0–1 */
+  overlayOpacity?: number;
   // Current active type
   backgroundType: 'color' | 'image' | 'video';
   // Legacy field for backward compatibility (optional, or can be removed if we migrate fully)
@@ -84,12 +94,28 @@ export interface Slide {
 
 export type SlideTransitionType = 'none' | 'fade' | 'slide' | 'slideUp' | 'zoom';
 
+/** `perSlide`: bar refills for each slide. `allSlides`: one continuous bar across the deck. */
+export type ProgressBarScope = 'perSlide' | 'allSlides';
+
 export interface SliderSettings {
   autoPlay: boolean;
   interval: number; // seconds
   loop: boolean;
   showArrows: boolean;
   showDots: boolean;
+  /** Thin progress bar along the bottom edge of the slider. */
+  showProgressBar: boolean;
+  progressBarColor: string;
+  /** Fill opacity (0–1). */
+  progressBarOpacity: number;
+  /** Track background opacity (0–1). */
+  progressBarTrackOpacity: number;
+  /** Per-slide refill vs cumulative progress across all slides. */
+  progressBarScope: ProgressBarScope;
+  /** Bar height in pixels (1–5). */
+  progressBarHeight: number;
+  /** When false, slides change instantly (no transition). */
+  slideTransitionEnabled: boolean;
   /** Transition when changing slides (preview + SliderRunner). */
   slideTransition: SlideTransitionType;
   /** Transition length in seconds. */

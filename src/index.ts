@@ -6,6 +6,7 @@ import './lib.css';
 // Main components
 export { default as SliderEditor } from './components/editor/EditorLayout';
 export { default as SliderRunner } from './components/SliderRunner';
+export { SlideOverlayLayer } from './components/SlideOverlayLayer';
 export type { SliderEditorProps } from './components/editor/EditorLayout';
 
 // Context & hooks (for advanced usage)
@@ -29,6 +30,7 @@ export type {
 // Types
 export type {
     Slide,
+    SlideBackgroundFit,
     EditorElement,
     ElementType,
     ElementStyle,
@@ -38,6 +40,7 @@ export type {
     SliderEditorSavePayload,
     SliderSettings,
     SlideTransitionType,
+    ProgressBarScope,
     CanvasSettings,
     AnimationConfig,
     ViewMode,
@@ -59,7 +62,20 @@ export {
     ANIMATION_PRESETS,
 } from './lib/constants';
 export {
+    SLIDE_BACKGROUND_FIT_OPTIONS,
+    getSlideBackgroundFit,
+    getSlideImageBackgroundCss,
+    normalizeSlideBackgroundFit,
+} from './lib/slideBackground';
+export {
+    getSlideOverlayOpacity,
+    getSlideOverlayStyle,
+    isSlideOverlayEnabled,
+} from './lib/slideOverlay';
+export {
     SLIDE_TRANSITION_OPTIONS,
+    SLIDE_TRANSITION_STYLE_OPTIONS,
+    getEffectiveSlideTransition,
     normalizeSliderSettings,
     resolveSlideTransitionMotion,
 } from './lib/slideTransitions';

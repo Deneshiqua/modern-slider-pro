@@ -16,7 +16,10 @@ import { Switch } from '@/components/ui/switch';
 import { getElementPropertiesForMode } from '@/lib/responsive';
 import { useEditor } from '@/context/EditorContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { EditorElement, ResponsivePropertyMode } from '@/types/editor';
+import { SettingsPanelDivider } from '@/components/editor/SettingsPanelDivider';
+import { SLIDE_BACKGROUND_FIT_OPTIONS, getSlideBackgroundFit } from '@/lib/slideBackground';
+import { getSlideOverlayOpacity } from '@/lib/slideOverlay';
+import { EditorElement, ResponsivePropertyMode, type SlideBackgroundFit } from '@/types/editor';
 import AlignmentControls from './AlignmentControls';
 import ColorAndBorderControls from './ColorAndBorderControls';
 import { MultiSelectionAlignmentControls } from './MultiSelectionAlignmentControls';
@@ -34,6 +37,8 @@ const PropertiesPanel = () => {
     updateElement,
     updateElementForMode,
     updateSlideBackground,
+    updateSlideBackgroundFit,
+    updateSlideOverlay,
     bringToFront,
     sendToBack,
     bringForward,
@@ -55,6 +60,26 @@ const PropertiesPanel = () => {
   const [isBackgroundMediaManagerOpen, setIsBackgroundMediaManagerOpen] = useState(false);
 
   const currentSlide = slides[currentSlideIndex];
+  const backgroundFitSelect = (
+    <div className="msp-space-y-1.5">
+      <Label className="msp-text-xs">{t('editor.properties.backgroundFit')}</Label>
+      <Select
+        value={getSlideBackgroundFit(currentSlide)}
+        onValueChange={(value) => updateSlideBackgroundFit(value as SlideBackgroundFit)}
+      >
+        <SelectTrigger className="msp-h-7 msp-text-xs">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {SLIDE_BACKGROUND_FIT_OPTIONS.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value} className="msp-text-xs">
+              {t(opt.labelKey)}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
   const selectedElement = currentSlide.elements.find(e => e.id === selectedElementId);
 
   // Helper to find element recursively if not found at root
@@ -175,6 +200,7 @@ const PropertiesPanel = () => {
                       {t('mediaManager.upload')}
                     </Button>
                     <p className="msp-text-xs msp-text-muted-foreground">{t('editor.properties.imageDesc')}</p>
+                    {backgroundFitSelect}
                   </TabsContent>
 
                   <TabsContent value="video" className="msp-space-y-2 msp-mt-2">
@@ -186,8 +212,54 @@ const PropertiesPanel = () => {
                       placeholder="https://www.youtube.com/watch?v=..."
                     />
                     <p className="msp-text-xs msp-text-muted-foreground">{t('editor.properties.videoDesc')}</p>
+                    {backgroundFitSelect}
                   </TabsContent>
                 </Tabs>
+
+                <SettingsPanelDivider />
+
+                <div className="msp-space-y-3">
+                  <div className="msp-flex msp-items-center msp-justify-between msp-gap-2">
+                    <div className="msp-min-w-0">
+                      <Label htmlFor="pp-overlay-enabled">{t('editor.properties.overlay')}</Label>
+                      <p className="msp-mt-0.5 msp-text-[11px] msp-text-muted-foreground">
+                        {t('editor.properties.overlayHint')}
+                      </p>
+                    </div>
+                    <Switch
+                      id="pp-overlay-enabled"
+                      checked={Boolean(currentSlide.overlayEnabled)}
+                      onCheckedChange={(checked) => updateSlideOverlay({ overlayEnabled: checked })}
+                    />
+                  </div>
+                  {currentSlide.overlayEnabled && (
+                    <>
+                      <ColorPicker
+                        label={t('editor.properties.overlayColor')}
+                        value={currentSlide.overlayColor || '#000000'}
+                        onChange={(overlayColor) => updateSlideOverlay({ overlayColor })}
+                      />
+                      <div className="msp-space-y-1.5">
+                        <Label className="msp-text-xs">{t('editor.properties.overlayOpacity')}</Label>
+                        <div className="msp-flex msp-items-center msp-gap-3">
+                          <Slider
+                            value={[Math.round(getSlideOverlayOpacity(currentSlide) * 100)]}
+                            min={0}
+                            max={100}
+                            step={5}
+                            onValueChange={([val]) =>
+                              updateSlideOverlay({ overlayOpacity: val / 100 })
+                            }
+                            className="msp-flex-1"
+                          />
+                          <span className="msp-w-10 msp-text-right msp-text-xs msp-tabular-nums">
+                            {Math.round(getSlideOverlayOpacity(currentSlide) * 100)}%
+                          </span>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           </div>

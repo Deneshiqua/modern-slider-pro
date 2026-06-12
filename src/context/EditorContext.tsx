@@ -1,4 +1,14 @@
-import { CanvasSettings, EditorElement, EditorState, ElementType, ResponsivePropertyMode, Slide, SliderSettings, ViewMode } from '@/types/editor';
+import {
+  CanvasSettings,
+  EditorElement,
+  EditorState,
+  ElementType,
+  ResponsivePropertyMode,
+  Slide,
+  SlideBackgroundFit,
+  SliderSettings,
+  ViewMode,
+} from '@/types/editor';
 import React, { ReactNode, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 
 import {
@@ -61,6 +71,10 @@ interface EditorContextType extends EditorState {
   startSlideTimelinePreview: () => void;
   stopSlideTimelinePreview: () => void;
   updateSlideBackground: (value: string, type: 'color' | 'image' | 'video') => void;
+  updateSlideBackgroundFit: (fit: SlideBackgroundFit) => void;
+  updateSlideOverlay: (
+    patch: Partial<Pick<Slide, 'overlayEnabled' | 'overlayColor' | 'overlayOpacity'>>,
+  ) => void;
   updateSlideTimelineDuration: (durationSeconds: number) => void;
   bringToFront: (id: string) => void;
   sendToBack: (id: string) => void;
@@ -181,6 +195,10 @@ const createNewSlide = (): Slide => ({
   backgroundColor: '#ffffff',
   backgroundImage: '',
   backgroundVideo: '',
+  backgroundFit: 'cover',
+  overlayEnabled: false,
+  overlayColor: '#000000',
+  overlayOpacity: 0.4,
   backgroundType: 'color',
   elements: []
 });
@@ -784,6 +802,30 @@ export const EditorProvider = ({
     setSlides(updatedSlides);
   };
 
+  const updateSlideBackgroundFit = (fit: SlideBackgroundFit) => {
+    const updatedSlides = [...slides];
+    const currentSlide = updatedSlides[currentSlideIndex];
+    if (!currentSlide) return;
+
+    updatedSlides[currentSlideIndex] = { ...currentSlide, backgroundFit: fit };
+    const aid = currentSlide.id;
+    if (aid) recordSlideScopedChange(aid);
+    setSlides(updatedSlides);
+  };
+
+  const updateSlideOverlay = (
+    patch: Partial<Pick<Slide, 'overlayEnabled' | 'overlayColor' | 'overlayOpacity'>>,
+  ) => {
+    const updatedSlides = [...slides];
+    const currentSlide = updatedSlides[currentSlideIndex];
+    if (!currentSlide) return;
+
+    updatedSlides[currentSlideIndex] = { ...currentSlide, ...patch };
+    const aid = currentSlide.id;
+    if (aid) recordSlideScopedChange(aid);
+    setSlides(updatedSlides);
+  };
+
   const updateSlideTimelineDuration = (durationSeconds: number) => {
     if (!Number.isFinite(durationSeconds) || durationSeconds < 1) return;
     const updatedSlides = [...slides];
@@ -1124,10 +1166,7 @@ export const EditorProvider = ({
     togglePlay: () => {
       setIsPlaying((prev) => {
         const next = !prev;
-        if (next) {
-          setSlideTimelinePlayToken((t) => t + 1);
-          setSlideTimelinePlaying(true);
-        } else {
+        if (!next) {
           setSlideTimelinePlaying(false);
         }
         return next;
@@ -1138,6 +1177,8 @@ export const EditorProvider = ({
     startSlideTimelinePreview,
     stopSlideTimelinePreview,
     updateSlideBackground,
+    updateSlideBackgroundFit,
+    updateSlideOverlay,
     updateSlideTimelineDuration,
     bringToFront,
     sendToBack,
@@ -1241,6 +1282,8 @@ export const useEditor = () => {
       startSlideTimelinePreview: () => { },
       stopSlideTimelinePreview: () => { },
       updateSlideBackground: () => { },
+      updateSlideBackgroundFit: () => { },
+      updateSlideOverlay: () => { },
       updateSlideTimelineDuration: () => { },
       bringToFront: () => { },
       sendToBack: () => { },

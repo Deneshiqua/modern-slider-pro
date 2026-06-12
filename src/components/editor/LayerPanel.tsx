@@ -9,6 +9,8 @@ import { cn } from '@/lib/utils';
 import { useEditor } from '@/context/EditorContext';
 import { useLanguage } from '@/context/LanguageContext';
 import ContextMenu from '@/components/editor/ContextMenu';
+import CanvasSettingsPanel from '@/components/editor/CanvasSettingsPanel';
+import SliderSettingsPanel from '@/components/editor/SliderSettingsPanel';
 
 function findElementInSlideTree(elements: EditorElement[], id: string): EditorElement | null {
   for (const el of elements) {
@@ -165,7 +167,14 @@ const LayerItem = ({ element, isSelected, selectionCount, selectElement, toggleE
   );
 };
 
-const LayerPanel = () => {
+export type LayerPanelTab = 'slides' | 'layers' | 'canvas-settings' | 'slider-settings';
+
+type LayerPanelProps = {
+  activeTab: LayerPanelTab;
+  onTabChange: (tab: LayerPanelTab) => void;
+};
+
+const LayerPanel = ({ activeTab, onTabChange }: LayerPanelProps) => {
   const {
     slides,
     currentSlideIndex,
@@ -183,8 +192,17 @@ const LayerPanel = () => {
     exitLayersDrill,
     addSlide,
     setCurrentSlide,
+    clearSelection,
   } = useEditor();
   const { t } = useLanguage();
+
+  const handleTabChange = (value: string) => {
+    const nextTab = value as LayerPanelTab;
+    if (nextTab !== activeTab) {
+      clearSelection();
+    }
+    onTabChange(nextTab);
+  };
 
   const currentSlide = slides[currentSlideIndex];
 
@@ -235,13 +253,35 @@ const LayerPanel = () => {
   }, [selectedElementIds, items, layersDrillParentId]);
 
   return (
-    <Tabs defaultValue="layers" className="msp-flex msp-flex-col msp-h-full msp-overflow-hidden">
-      <TabsList className="msp-w-full msp-rounded-none msp-border-b msp-h-9 msp-bg-secondary/30 msp-shrink-0 msp-justify-start msp-px-1 msp-gap-0">
-        <TabsTrigger value="slides" className="msp-text-xs msp-h-7 msp-px-3 msp-rounded-sm">
-          Slaytlar
+    <Tabs
+      value={activeTab}
+      onValueChange={handleTabChange}
+      className="msp-flex msp-flex-col msp-h-full msp-overflow-hidden"
+    >
+      <TabsList className="msp-grid msp-w-full msp-shrink-0 msp-grid-cols-4 msp-rounded-none msp-border-b msp-bg-secondary/30 msp-h-9 msp-gap-0 msp-p-0">
+        <TabsTrigger
+          value="slides"
+          className="msp-h-9 msp-rounded-none msp-border-0 msp-text-[10px] msp-px-0.5 msp-shadow-none data-[state=active]:msp-bg-background"
+        >
+          {t('editor.layers.slidesTab')}
         </TabsTrigger>
-        <TabsTrigger value="layers" className="msp-text-xs msp-h-7 msp-px-3 msp-rounded-sm">
+        <TabsTrigger
+          value="layers"
+          className="msp-h-9 msp-rounded-none msp-border-0 msp-text-[10px] msp-px-0.5 msp-shadow-none data-[state=active]:msp-bg-background"
+        >
           {t('editor.layers.title')}
+        </TabsTrigger>
+        <TabsTrigger
+          value="canvas-settings"
+          className="msp-h-9 msp-rounded-none msp-border-0 msp-text-[10px] msp-px-0.5 msp-leading-tight msp-shadow-none data-[state=active]:msp-bg-background"
+        >
+          {t('editor.layers.canvasSettingsTab')}
+        </TabsTrigger>
+        <TabsTrigger
+          value="slider-settings"
+          className="msp-h-9 msp-rounded-none msp-border-0 msp-text-[10px] msp-px-0.5 msp-leading-tight msp-shadow-none data-[state=active]:msp-bg-background"
+        >
+          {t('editor.layers.sliderSettingsTab')}
         </TabsTrigger>
       </TabsList>
 
@@ -365,6 +405,20 @@ const LayerPanel = () => {
           </Reorder.Group>
           </>
         )}
+      </TabsContent>
+
+      <TabsContent
+        value="canvas-settings"
+        className="msp-m-0 msp-flex msp-min-h-0 msp-flex-1 msp-flex-col msp-overflow-hidden data-[state=inactive]:msp-hidden"
+      >
+        <CanvasSettingsPanel />
+      </TabsContent>
+
+      <TabsContent
+        value="slider-settings"
+        className="msp-m-0 msp-flex msp-min-h-0 msp-flex-1 msp-flex-col msp-overflow-hidden data-[state=inactive]:msp-hidden"
+      >
+        <SliderSettingsPanel />
       </TabsContent>
     </Tabs>
   );

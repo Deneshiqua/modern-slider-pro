@@ -46,6 +46,23 @@ export function getSlideTimelineDuration(slide: Slide): number {
   return slide.timeline?.duration ?? DEFAULT_SLIDE_TIMELINE_DURATION_S;
 }
 
+/**
+ * How long a slide stays visible before autoplay advances.
+ * Timeline duration when it is longer than the slider autoplay interval; otherwise autoplay interval.
+ */
+export function getSlideAutoplayDwellSeconds(slide: Slide, autoplayIntervalSeconds: number): number {
+  const timelineSeconds = getSlideTimelineDuration(slide);
+  const autoplaySeconds = Math.max(0.1, autoplayIntervalSeconds);
+  return timelineSeconds > autoplaySeconds ? timelineSeconds : autoplaySeconds;
+}
+
+/** Autoplay runs for 2+ slides, or a single slide when loop is enabled. */
+export function shouldRunSliderAutoplay(slideCount: number, autoPlay: boolean, loop: boolean): boolean {
+  if (!autoPlay || slideCount < 1) return false;
+  if (slideCount > 1) return true;
+  return loop;
+}
+
 export function defaultTimelineClipForElement(el: EditorElement): ElementTimelineClip {
   const tr = el.animation?.transition;
   const delay =

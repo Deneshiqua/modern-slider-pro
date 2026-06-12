@@ -203,6 +203,40 @@ Portals attach to ``document.body`` with high **z-index** values (near **100 0
 
 ## Changelog
 
+### 0.7.0 — 2026-06-01
+- **Added**: **Slide background sizing** — per slide, set image/video fit to **Cover**, **Fit** (contain), **Stretch** (fill), or **Original size** (`backgroundFit` on `Slide`; helpers in `slideBackground.ts`).
+- **Added**: **Slide overlay** — optional tint layer over the background with **color** and **opacity** (`overlayEnabled`, `overlayColor`, `overlayOpacity`); rendered in the editor, preview, and `SliderRunner` via `SlideOverlayLayer`.
+- **Added**: **Pause autoplay on hover** — when autoplay is on, moving the pointer over the slider pauses slide advance and the progress bar; leaving resumes (`SliderRunner` + editor preview).
+- **Improved**: **`SliderRunner`** — video backgrounds now respect `backgroundFit`; shared YouTube embed helper (`getYoutubeEmbedUrl`).
+- **Improved**: Editor **Properties** (slide, no selection) — overlay controls below background tabs; background fit on image/video tabs.
+
+### 0.6.3 — 2026-06-01
+- **Added**: **Progress bar scope** — in Slider settings, choose **Each slide** (`progressBarScope: 'perSlide'`) to refill the bar on every slide, or **All slides** (`'allSlides'`) for one continuous bar across the deck.
+- **Added**: **Progress bar thickness** — adjustable height from **1px to 5px** (`progressBarHeight`, default `4`).
+- **Improved**: **Slider** and **Canvas settings** panels — thin dividers between each control for clearer grouping (`SettingsPanelDivider`).
+- **Fixed**: **Progress bar** desync when using navigation **arrows** or **dots** — fill resets correctly on manual slide change (uniform scale + `useLayoutEffect` / remount on index change).
+
+### 0.6.2 — 2026-06-01
+- **Fixed**: **`SliderRunner` typography distortion** — slide stage now uses a **uniform** scale (`min(scaleX, scaleY)`) and centers content so text and assets are not stretched when the embed container aspect ratio differs from the editor canvas.
+- **Fixed**: Editor **context menu** build error — removed unsupported controlled `open` on Radix `ContextMenu` root; rename still closes the menu via `onSelect` and deferred dialog open.
+
+### 0.6.1 — 2026-06-01
+- **Fixed**: **`SliderRunner` responsive layout** — when the embed container is wider or taller than the editor canvas (`canvasSettings.canvasWidth` / `canvasHeight`), slide content is scaled to fit (e.g. `width="100%"` on a 1920px page keeps centered layouts designed at 1280px). Uses `getSlideStageScale()` and a `ResizeObserver` on the runner container.
+
+### 0.6.0 — 2026-06-01
+- **Added**: Right sidebar tabs — **Slides**, **Layers**, **Canvas settings**, and **Slider settings** (moved from the top toolbar).
+- **Added**: **Progress bar** — optional bottom bar with color, fill opacity, and track opacity (`settings.showProgressBar`, `progressBarColor`, `progressBarOpacity`, `progressBarTrackOpacity`).
+- **Added**: **Slide transition** on/off switch in Slider settings (`slideTransitionEnabled`); style and duration apply only when enabled.
+- **Added**: `getSlideAutoplayDwellSeconds()` — autoplay waits the **timeline duration** when it is longer than the autoplay interval, otherwise the **autoplay interval**.
+- **Added**: Monaco-based **JSON export / import** dialogs (`JsonCodeEditor`); toolbar save label **Export** (EN) / **Dışa Aktar** (TR).
+- **Improved**: **Properties** panel — hidden on Canvas / Slider settings tabs; on **Layers**, shown only when a layer is selected; slide background props on the **Slides** tab.
+- **Improved**: Switching sidebar tabs **clears layer selection** to avoid cross-tab confusion.
+- **Improved**: **Loop** with a **single slide** replays timeline / entrance animations each cycle; progress bar restarts via `cycleKey` / `slideTimelinePlayToken`.
+- **Improved**: Slider chrome (arrows, dots, progress) visible in the editor when enabled and there is at least one slide (progress bar also when loop + autoplay on a single slide).
+- **Fixed**: Toolbar preview **not advancing** to the next slide — slide-advance timer no longer cancelled by timeline `play()` re-renders; timeline no longer loops the same slide during full preview.
+- **Fixed**: Context menu staying open when choosing **Rename**.
+- **Fixed**: Timeline settings control moved into **Canvas settings** (timeline show/hide).
+
 ### 0.5.0 — 2026-06-01
 - **Added**: **Slide timeline** — per-element entrance clips on a slide timeline (drag, trim, play / pause / stop, slide duration, Ctrl/Cmd + scroll to zoom the track).
 - **Added**: **Slide transitions** — fade, slide, slide up, and zoom between slides in **Slider settings**; `SliderRunner` and editor preview use `settings.slideTransition` / `slideTransitionDuration`.

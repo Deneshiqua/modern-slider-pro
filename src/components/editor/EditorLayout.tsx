@@ -4,7 +4,7 @@ import { toast, Toaster } from 'sonner';
 
 import Canvas from './Canvas';
 import { EditorProvider, useEditor } from '@/context/EditorContext';
-import LayerPanel from './LayerPanel';
+import LayerPanel, { type LayerPanelTab } from './LayerPanel';
 import { CanvasViewportProvider } from '@/context/CanvasViewportContext';
 import { SlideTimelinePlaybackProvider } from '@/context/SlideTimelinePlaybackContext';
 import { SnapGuidesProvider } from '@/context/SnapGuidesContext';
@@ -115,9 +115,17 @@ const EditorShell = ({
     cutSelectionToClipboard,
     pasteClipboardElements,
     selectAllRootElements,
+    selectedElementId,
+    selectedElementIds,
   } = useEditor();
 
   const showTimeline = canvasSettings.showTimeline !== false;
+  const [layerPanelTab, setLayerPanelTab] = React.useState<LayerPanelTab>('layers');
+  const hasLayerSelection = selectedElementIds.length > 0 || selectedElementId != null;
+  const showPropertiesPanel =
+    layerPanelTab !== 'canvas-settings' &&
+    layerPanelTab !== 'slider-settings' &&
+    (layerPanelTab !== 'layers' || hasLayerSelection);
 
   useDirtyReloadGuard(isDirty, t);
 
@@ -253,18 +261,19 @@ const EditorShell = ({
             maxSize={50}
             className="msp-min-h-0 msp-min-w-0 msp-border-l msp-bg-card"
           >
-            <ResizablePanelGroup direction="vertical" className="msp-h-full">
-
-              <ResizablePanel defaultSize={35} minSize={10}>
-                <LayerPanel />
-              </ResizablePanel>
-
-              <ResizableHandle withHandle />
-
-              <ResizablePanel defaultSize={65} minSize={20}>
-                <PropertiesPanel />
-              </ResizablePanel>
-            </ResizablePanelGroup>
+            {showPropertiesPanel ? (
+              <ResizablePanelGroup direction="vertical" className="msp-h-full">
+                <ResizablePanel defaultSize={35} minSize={10}>
+                  <LayerPanel activeTab={layerPanelTab} onTabChange={setLayerPanelTab} />
+                </ResizablePanel>
+                <ResizableHandle withHandle />
+                <ResizablePanel defaultSize={65} minSize={20}>
+                  <PropertiesPanel />
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            ) : (
+              <LayerPanel activeTab={layerPanelTab} onTabChange={setLayerPanelTab} />
+            )}
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
