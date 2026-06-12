@@ -131,6 +131,9 @@ export interface SliderProject {
 
 export type SliderEditorSavePayload = SliderProject;
 
+/** How SliderRunner derives its outer height from `canvasHeight`. */
+export type CanvasHeightMode = 'fixed' | 'responsive' | 'fitBackground';
+
 export interface CanvasSettings {
   gridSize: number;
   showGrid: boolean;
@@ -141,7 +144,14 @@ export interface CanvasSettings {
   /** Editor-only: show slide animation timeline panel below the canvas. */
   showTimeline: boolean;
   canvasWidth: number;
+  /** Design / max height in px. Used as fixed height or upper cap depending on `canvasHeightMode`. */
   canvasHeight: number;
+  /**
+   * - fixed: always `canvasHeight`
+   * - responsive: width 100%, aspect-ratio from canvas, `max-height: canvasHeight` (shrinks on narrow viewports)
+   * - fitBackground: when slide background uses contain, height follows image aspect ratio up to `canvasHeight`
+   */
+  canvasHeightMode?: CanvasHeightMode;
 }
 
 export interface EditorState {

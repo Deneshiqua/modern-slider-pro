@@ -1,22 +1,17 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useEditor } from '@/context/EditorContext';
+import { useMediaPicker } from '@/context/MediaPickerContext';
 import { Button } from '@/components/ui/button';
 import { Type, Image as ImageIcon, MousePointerClick, Box, Video } from 'lucide-react';
 import { useLanguage } from '@/context/LanguageContext';
-import MediaManager from './MediaManager';
 
 const Sidebar = () => {
   const { addElement } = useEditor();
   const { t } = useLanguage();
-  const [isMediaManagerOpen, setIsMediaManagerOpen] = useState(false);
-
-  const handleImageSelect = (url: string) => {
-    addElement('image', { content: url });
-  };
+  const { openMediaPicker } = useMediaPicker();
 
   return (
-    <>
-      <div className="msp-w-16 msp-border-r msp-bg-card msp-flex msp-flex-col msp-items-center msp-py-4 msp-gap-4 msp-shrink-0">
+    <div className="msp-w-16 msp-border-r msp-bg-card msp-flex msp-flex-col msp-items-center msp-py-4 msp-gap-4 msp-shrink-0">
         <Button 
           variant="ghost" 
           size="icon" 
@@ -32,7 +27,12 @@ const Sidebar = () => {
           variant="ghost" 
           size="icon" 
           className="msp-h-12 msp-w-12 msp-flex msp-flex-col msp-gap-1 hover:msp-bg-secondary"
-          onClick={() => setIsMediaManagerOpen(true)}
+          onClick={() =>
+            openMediaPicker({
+              purpose: 'image',
+              onSelect: (url) => addElement('image', { content: url }),
+            })
+          }
           title={t('editor.toolbar.addImage')}
         >
           <ImageIcon className="msp-h-5 msp-w-5" />
@@ -72,13 +72,6 @@ const Sidebar = () => {
           <span className="msp-text-[10px]">Box</span>
         </Button>
       </div>
-
-      <MediaManager 
-        isOpen={isMediaManagerOpen} 
-        onClose={() => setIsMediaManagerOpen(false)} 
-        onSelect={handleImageSelect}
-      />
-    </>
   );
 };
 

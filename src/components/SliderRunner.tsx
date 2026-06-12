@@ -28,6 +28,10 @@ import {
   getYoutubeEmbedUrl,
   isYoutubeBackgroundUrl,
 } from '@/lib/slideBackground';
+import {
+  getCanvasHeightMode,
+  resolveRunnerContainerStyle,
+} from '@/lib/canvasHeight';
 import { getDefaultSlideDesignSize, getSlideStageScale } from '@/lib/slideStageLayout';
 
 interface SliderRunnerProps {
@@ -74,10 +78,63 @@ const SliderRunner = ({
   const slideTransitionDuration =
     sliderSettings.slideTransitionDuration ?? DEFAULT_SLIDER_SETTINGS.slideTransitionDuration;
   const designSize = getDefaultSlideDesignSize(project?.canvasSettings, 1280, 600);
+  const heightMode = getCanvasHeightMode(project?.canvasSettings);
   const resolvedWidth = width ?? (project ? `${designSize.width}px` : '100%');
   const resolvedHeight = height ?? (project ? `${designSize.height}px` : '600px');
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerSize, setContainerSize] = useState<{ width: number; height: number } | null>(null);
+  const [backgroundImageSize, setBackgroundImageSize] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
+
+  const safeSlideIndex = slides.length ? Math.min(currentIndex, slides.length - 1) : 0;
+  const currentSlide = slides[safeSlideIndex];
+  const backgroundFit = currentSlide ? getSlideBackgroundFit(currentSlide) : 'cover';
+  const backgroundImageUrl = currentSlide ? getSlideBackgroundImageUrl(currentSlide) : undefined;
+
+  useEffect(() => {
+    if (!backgroundImageUrl) {
+      setBackgroundImageSize(null);
+      return;
+    }
+
+    let cancelled = false;
+    const image = new Image();
+    image.onload = () => {
+      if (!cancelled && image.naturalWidth > 0 && image.naturalHeight > 0) {
+        setBackgroundImageSize({
+          width: image.naturalWidth,
+          height: image.naturalHeight,
+        });
+      }
+    };
+    image.onerror = () => {
+      if (!cancelled) {
+        setBackgroundImageSize(null);
+      }
+    };
+    image.src = backgroundImageUrl;
+
+    return () => {
+      cancelled = true;
+    };
+  }, [backgroundImageUrl]);
+
+  const measuredWidth = containerSize?.width ?? designSize.width;
+  const runnerHeightProp = heightMode === 'fixed' ? height : undefined;
+  const containerStyle = resolveRunnerContainerStyle({
+    heightMode,
+    designWidth: designSize.width,
+    designHeight: designSize.height,
+    resolvedWidth,
+    heightProp: runnerHeightProp ?? resolvedHeight,
+    measuredWidth,
+    backgroundFit,
+    backgroundImageUrl,
+    imageNaturalWidth: backgroundImageSize?.width,
+    imageNaturalHeight: backgroundImageSize?.height,
+  });
 
   useLayoutEffect(() => {
     const el = containerRef.current;
@@ -94,7 +151,7 @@ const SliderRunner = ({
     const observer = new ResizeObserver(update);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [resolvedWidth, resolvedHeight]);
+  }, [resolvedWidth, heightMode, containerStyle.height, backgroundImageUrl]);
 
   const displayWidth = containerSize?.width ?? designSize.width;
   const displayHeight = containerSize?.height ?? designSize.height;
@@ -167,21 +224,18 @@ const SliderRunner = ({
 
   if (!slides.length) return null;
 
-  const currentSlide = slides[currentIndex];
   const slideMotion = resolveSlideTransitionMotion(
     slideTransition,
     slideTransitionDuration,
     transitionDirection,
   );
-  const backgroundFit = getSlideBackgroundFit(currentSlide);
-  const backgroundImageUrl = getSlideBackgroundImageUrl(currentSlide);
   const backgroundVideoUrl = getSlideBackgroundVideoUrl(currentSlide);
 
   return (
     <div
       ref={containerRef}
       className="msp-relative msp-overflow-hidden msp-bg-gray-100 msp-group"
-      style={{ width: resolvedWidth, height: resolvedHeight }}
+      style={containerStyle}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >

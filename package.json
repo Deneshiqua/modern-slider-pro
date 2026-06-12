@@ -1,6 +1,6 @@
 {
   "name": "modern-slider-pro",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "description": "Visual drag-and-drop slider builder and runner for React — canvas editor, alignment, rulers, animations, and embeddable playback.",
   "author": "deneshiqua",
   "repository": {
@@ -49,6 +49,7 @@
     "dev:fresh": "pnpm exec vite --force",
     "build": "vite build",
     "build:lib": "vite build --config vite.lib.config.ts",
+    "build:lib:watch": "vite build --config vite.lib.config.ts --watch",
     "prepublishOnly": "pnpm build:lib",
     "lint": "eslint --quiet ./src",
     "preview": "vite preview"

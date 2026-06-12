@@ -4,9 +4,18 @@ import { SettingsPanelDivider } from '@/components/editor/SettingsPanelDivider';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useEditor } from '@/context/EditorContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { normalizeCanvasHeightMode } from '@/lib/canvasHeight';
+import type { CanvasHeightMode } from '@/types/editor';
 
 const CANVAS_SIZE_PRESETS = [
   { w: 1280, h: 720 },
@@ -101,6 +110,35 @@ const CanvasSettingsPanel = () => {
               </div>
             </div>
           )}
+        </div>
+
+        <SettingsPanelDivider />
+
+        <div className="msp-space-y-2">
+          <div>
+            <Label className="msp-text-xs">{t('editor.canvas.heightMode')}</Label>
+            <p className="msp-mt-0.5 msp-text-[11px] msp-leading-snug msp-text-muted-foreground">
+              {t('editor.canvas.heightModeHint')}
+            </p>
+          </div>
+          <Select
+            value={normalizeCanvasHeightMode(canvasSettings.canvasHeightMode)}
+            onValueChange={(value) =>
+              updateCanvasSettings({ canvasHeightMode: value as CanvasHeightMode })
+            }
+          >
+            <SelectTrigger className="msp-h-8 msp-text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="fixed">{t('editor.canvas.heightModeFixed')}</SelectItem>
+              <SelectItem value="responsive">{t('editor.canvas.heightModeResponsive')}</SelectItem>
+              <SelectItem value="fitBackground">{t('editor.canvas.heightModeFitBackground')}</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="msp-text-[11px] msp-leading-snug msp-text-muted-foreground">
+            {t('editor.canvas.heightMaxHint')}
+          </p>
         </div>
 
         <SettingsPanelDivider />

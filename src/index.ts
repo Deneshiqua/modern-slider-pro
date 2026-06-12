@@ -8,6 +8,11 @@ export { default as SliderEditor } from './components/editor/EditorLayout';
 export { default as SliderRunner } from './components/SliderRunner';
 export { SlideOverlayLayer } from './components/SlideOverlayLayer';
 export type { SliderEditorProps } from './components/editor/EditorLayout';
+export type {
+  MediaPickerHandler,
+  MediaPickerPurpose,
+  MediaPickerRequest,
+} from './types/mediaPicker';
 
 // Context & hooks (for advanced usage)
 export { EditorProvider, useEditor } from './context/EditorContext';
@@ -42,6 +47,7 @@ export type {
     SlideTransitionType,
     ProgressBarScope,
     CanvasSettings,
+    CanvasHeightMode,
     AnimationConfig,
     ViewMode,
     ElementHoverColors,
@@ -80,3 +86,9 @@ export {
     resolveSlideTransitionMotion,
 } from './lib/slideTransitions';
 export type { SlideTransitionDirection } from './lib/slideTransitions';
+export {
+    getCanvasHeightMode,
+    getFitBackgroundHeight,
+    normalizeCanvasHeightMode,
+    resolveRunnerContainerStyle,
+} from './lib/canvasHeight';

@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import ColorPicker from './ColorPicker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import MediaManager from './MediaManager';
+import { useMediaPicker } from '@/context/MediaPickerContext';
 import { Slider } from "@/components/ui/slider";
 import { Switch } from '@/components/ui/switch';
 import { getElementPropertiesForMode } from '@/lib/responsive';
@@ -48,6 +48,7 @@ const PropertiesPanel = () => {
     setResponsiveViewport,
   } = useEditor();
   const { t } = useLanguage();
+  const { openMediaPicker } = useMediaPicker();
 
   // State to persist accordion open/close status
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([
@@ -57,8 +58,6 @@ const PropertiesPanel = () => {
     'animation',
     'spacing',
   ]);
-  const [isBackgroundMediaManagerOpen, setIsBackgroundMediaManagerOpen] = useState(false);
-
   const currentSlide = slides[currentSlideIndex];
   const backgroundFitSelect = (
     <div className="msp-space-y-1.5">
@@ -194,7 +193,12 @@ const PropertiesPanel = () => {
                       variant="outline"
                       size="sm"
                       className="msp-w-full msp-justify-center msp-gap-1 msp-h-7 msp-text-xs"
-                      onClick={() => setIsBackgroundMediaManagerOpen(true)}
+                      onClick={() =>
+                        openMediaPicker({
+                          purpose: 'image',
+                          onSelect: (url) => updateSlideBackground(url, 'image'),
+                        })
+                      }
                     >
                       <ImageIcon className="msp-h-3 msp-w-3" />
                       {t('mediaManager.upload')}
@@ -264,11 +268,6 @@ const PropertiesPanel = () => {
             </div>
           </div>
         </div>
-        <MediaManager
-          isOpen={isBackgroundMediaManagerOpen}
-          onClose={() => setIsBackgroundMediaManagerOpen(false)}
-          onSelect={(url) => updateSlideBackground(url, 'image')}
-        />
       </>
     );
   }
@@ -328,6 +327,22 @@ const PropertiesPanel = () => {
                     value={activeElement.content}
                     onChange={(e) => updateElement(activeElement.id, { content: e.target.value })}
                   />
+                  {activeElement.type === 'image' ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="msp-w-full msp-justify-center msp-gap-1 msp-h-7 msp-text-xs"
+                      onClick={() =>
+                        openMediaPicker({
+                          purpose: 'image',
+                          onSelect: (url) => updateElement(activeElement.id, { content: url }),
+                        })
+                      }
+                    >
+                      <ImageIcon className="msp-h-3 msp-w-3" />
+                      {t('mediaManager.upload')}
+                    </Button>
+                  ) : null}
                 </div>
                 {activeElement.type === 'text' || activeElement.type === 'button' ? (
                   <div className="msp-space-y-1">

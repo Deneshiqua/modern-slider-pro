@@ -17,7 +17,9 @@ import { Theme, ThemeProvider, useTheme } from '@/context/ThemeContext';
 import Toolbar from './Toolbar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useDirtyReloadGuard } from '@/hooks/useDirtyReloadGuard';
+import { MediaPickerProvider } from '@/context/MediaPickerContext';
 import { CanvasSettings, Slide, SliderEditorSavePayload, SliderSettings } from '@/types/editor';
+import type { MediaPickerHandler } from '@/types/mediaPicker';
 import { cn } from '@/lib/utils';
 
 const SlideTimelinePanel = React.lazy(() => import('./SlideTimelinePanel'));
@@ -69,6 +71,8 @@ export type SliderEditorProps = {
   useSystemTheme?: boolean;
   showToaster?: boolean;
   className?: string;
+  /** Override built-in media library — host opens its own file manager and calls `request.onSelect(url)`. */
+  onOpenMediaPicker?: MediaPickerHandler;
 };
 
 const TimelinePanelSlot = () => {
@@ -299,6 +303,7 @@ const EditorLayout = ({
   useSystemTheme,
   showToaster,
   className,
+  onOpenMediaPicker,
 }: SliderEditorProps) => {
   return (
     <ThemeProvider
@@ -321,21 +326,23 @@ const EditorLayout = ({
             initialSettings={initialSettings}
             initialCanvasSettings={initialCanvasSettings}
           >
-            <SnapGuidesProvider>
-            <CanvasViewportProvider>
-            <SlideTimelinePlaybackProvider>
-            <TooltipProvider>
-              <EditorShell
-                onDemoSave={onDemoSave}
-                onSave={onSave}
-                saveButtonLabel={saveButtonLabel}
-                showToaster={showToaster}
-                className={className}
-              />
-            </TooltipProvider>
-            </SlideTimelinePlaybackProvider>
-            </CanvasViewportProvider>
-            </SnapGuidesProvider>
+            <MediaPickerProvider onOpenMediaPicker={onOpenMediaPicker}>
+              <SnapGuidesProvider>
+              <CanvasViewportProvider>
+              <SlideTimelinePlaybackProvider>
+              <TooltipProvider>
+                <EditorShell
+                  onDemoSave={onDemoSave}
+                  onSave={onSave}
+                  saveButtonLabel={saveButtonLabel}
+                  showToaster={showToaster}
+                  className={className}
+                />
+              </TooltipProvider>
+              </SlideTimelinePlaybackProvider>
+              </CanvasViewportProvider>
+              </SnapGuidesProvider>
+            </MediaPickerProvider>
           </EditorProvider>
         </PublishedSlidesProvider>
       </LanguageProvider>

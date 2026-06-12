@@ -15,6 +15,8 @@ A visual drag-and-drop slider/carousel builder and runner for React. Design anim
 - ▶️ Live preview with auto-play, navigation arrows and dots
 - 🎨 Text, image, video, button and box elements (nested groups)
 - 📐 Grid snapping, **snap-to-element guides** (guides while dragging; snap on release) and configurable canvas size
+- 📏 **Site height modes** — fixed, responsive (aspect-ratio + max height), or **fit background** for contain images (no letterboxing on live site)
+- 🖼️ **Injectable media picker** — wire your own file manager via `onOpenMediaPicker` (sidebar, slide background, image elements)
 - 📐 **Layer alignment** — vertical / horizontal canvas alignment, 3×3 grid (element / group / canvas), multi-selection union snap with DOM refinement
 - ➕ **Center guides** — optional vertical + horizontal lines at canvas center (Canvas settings)
 - 📏 Optional Photoshop-style canvas rulers with **live pointer readout** on the rulers (Canvas settings)
@@ -157,7 +159,7 @@ import type {
 } from 'modern-slider-pro';
 ```
 
-`CanvasSettings` includes grid, snap, canvas dimensions, **`showRulers`**, **`showCenterGuides`** (center crosshair in the editor), and other toggles saved in project JSON.
+`CanvasSettings` includes grid, snap, canvas dimensions, **`canvasHeightMode`** (`fixed` | `responsive` | `fitBackground`), **`showRulers`**, **`showCenterGuides`** (center crosshair in the editor), and other toggles saved in project JSON.
 
 ---
 
@@ -202,6 +204,12 @@ Portals attach to ``document.body`` with high **z-index** values (near **100 0
 ---
 
 ## Changelog
+
+### 0.8.0 — 2026-06-11
+- **Added**: **`canvasHeightMode`** on `CanvasSettings` — `fixed` (default), `responsive` (aspect-ratio + `max-height: canvasHeight`), or `fitBackground` (shrink runner to contained image aspect ratio, capped at `canvasHeight`). Configured in **Canvas settings → Site height behavior**.
+- **Added**: **`onOpenMediaPicker`** on `SliderEditor` — host apps inject a file manager; types `MediaPickerHandler`, `MediaPickerRequest`, context `MediaPickerContext`.
+- **Added**: Helpers `getCanvasHeightMode`, `getFitBackgroundHeight`, `resolveRunnerContainerStyle`, `normalizeCanvasHeightMode` (exported from package root).
+- **Improved**: **`SliderRunner`** — respects `canvasHeightMode`; preloads background image dimensions for `fitBackground`; `height` prop applies only in `fixed` mode (other modes use `canvasHeight` as max).
 
 ### 0.7.0 — 2026-06-01
 - **Added**: **Slide background sizing** — per slide, set image/video fit to **Cover**, **Fit** (contain), **Stretch** (fill), or **Original size** (`backgroundFit` on `Slide`; helpers in `slideBackground.ts`).
