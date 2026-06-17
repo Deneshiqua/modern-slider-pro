@@ -1,7 +1,7 @@
 import { ANIMATION_PRESETS, FONT_SIZES } from '@/lib/constants';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, BringToFront, Image as ImageIcon, Palette, SendToBack, Type, Video } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
@@ -29,6 +29,7 @@ import SpacingControls from './SpacingControls';
 import { pruneMultiSelectionIds } from '@/lib/alignment';
 
 const PropertiesPanel = () => {
+  const PROPERTIES_ACCORDION_STORAGE_KEY = 'msp:properties:open-accordion-items';
   const {
     selectedElementId,
     selectedElementIds,
@@ -51,13 +52,24 @@ const PropertiesPanel = () => {
   const { openMediaPicker } = useMediaPicker();
 
   // State to persist accordion open/close status
-  const [openAccordionItems, setOpenAccordionItems] = useState<string[]>([
-    'content',
-    'color',
-    'style',
-    'animation',
-    'spacing',
-  ]);
+  const [openAccordionItems, setOpenAccordionItems] = useState<string[]>(() => {
+    if (typeof window === 'undefined') {
+      return ['content', 'color', 'style', 'animation', 'spacing'];
+    }
+
+    try {
+      const raw = window.localStorage.getItem(PROPERTIES_ACCORDION_STORAGE_KEY);
+      if (!raw) return ['content', 'color', 'style', 'animation', 'spacing'];
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.every((item) => typeof item === 'string')) {
+        return parsed;
+      }
+    } catch {
+      // Ignore invalid persisted value and fallback to defaults.
+    }
+
+    return ['content', 'color', 'style', 'animation', 'spacing'];
+  });
   const currentSlide = slides[currentSlideIndex];
   const backgroundFitSelect = (
     <div className="msp-space-y-1.5">
@@ -99,6 +111,17 @@ const PropertiesPanel = () => {
   const activeElement = selectedElement || (selectedElementId ? findElementRecursive(currentSlide.elements, selectedElementId) : null);
   const editableElement = activeElement ? getElementPropertiesForMode(activeElement, propertyMode) : null;
   const activeElementOpacity = typeof editableElement?.style.opacity === 'number' ? editableElement.style.opacity : 1;
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(
+        PROPERTIES_ACCORDION_STORAGE_KEY,
+        JSON.stringify(openAccordionItems),
+      );
+    } catch {
+      // Ignore storage write failures.
+    }
+  }, [openAccordionItems]);
 
   const handlePropertyModeChange = (mode: ResponsivePropertyMode) => {
     setPropertyMode(mode);
@@ -344,6 +367,14 @@ const PropertiesPanel = () => {
                     </Button>
                   ) : null}
                 </div>
+              </AccordionContent>
+            </AccordionItem>
+
+            <AccordionItem value="layout">
+              <AccordionTrigger className={accordionTriggerClass}>
+                {t('editor.properties.layout')}
+              </AccordionTrigger>
+              <AccordionContent className={`${accordionBodyClass} msp-space-y-3`}>
                 {activeElement.type === 'text' || activeElement.type === 'button' ? (
                   <div className="msp-space-y-1">
                     <Label className="msp-text-xs">{t('editor.properties.textAlign')}</Label>
@@ -389,6 +420,49 @@ const PropertiesPanel = () => {
                 <AlignmentControls elementId={activeElement.id} propertyMode={propertyMode} />
               </AccordionContent>
             </AccordionItem>
+
+            {activeElement.type === 'button' ? (
+              <AccordionItem value="link">
+                <AccordionTrigger className={accordionTriggerClass}>
+                  {t('editor.properties.buttonLinkSettings')}
+                </AccordionTrigger>
+                <AccordionContent className={`${accordionBodyClass} msp-space-y-3`}>
+                  <div className="msp-space-y-1">
+                    <Label className="msp-text-xs">{t('editor.properties.buttonLink')}</Label>
+                    <Input
+                      className="msp-h-7 msp-text-xs"
+                      value={activeElement.buttonLink || ''}
+                      placeholder={t('editor.properties.buttonLinkPlaceholder')}
+                      onChange={(e) =>
+                        updateElement(activeElement.id, {
+                          buttonLink: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="msp-space-y-1">
+                    <Label className="msp-text-xs">{t('editor.properties.buttonLinkTarget')}</Label>
+                    <Select
+                      value={activeElement.buttonLinkTarget || '_blank'}
+                      onValueChange={(value) =>
+                        updateElement(activeElement.id, {
+                          buttonLinkTarget: value as '_self' | '_blank',
+                        })
+                      }
+                    >
+                      <SelectTrigger className="msp-h-7 msp-text-xs">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="_self">{t('editor.properties.buttonLinkTargetSelf')}</SelectItem>
+                        <SelectItem value="_blank">{t('editor.properties.buttonLinkTargetBlank')}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </AccordionContent>
+              </AccordionItem>
+            ) : null}
 
             <AccordionItem value="color">
               <AccordionTrigger className={accordionTriggerClass}>{t('editor.properties.colorTitle')}</AccordionTrigger>

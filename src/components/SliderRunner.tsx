@@ -48,6 +48,19 @@ interface SliderRunnerProps {
   onSlideChange?: (index: number) => void;
 }
 
+function resolveButtonHref(raw?: string): string | null {
+  const value = raw?.trim();
+  if (!value) return null;
+  if (/^(https?:)?\/\//i.test(value) || value.startsWith('/') || value.startsWith('#')) {
+    return value;
+  }
+  return `https://${value}`;
+}
+
+function resolveButtonTarget(raw?: string): '_self' | '_blank' {
+  return raw === '_self' ? '_self' : '_blank';
+}
+
 const SliderRunner = ({
   slides: slidesProp,
   project,
@@ -326,9 +339,22 @@ const SliderRunner = ({
                       className="msp-w-full msp-h-full msp-object-cover"
                     />
                   )}
-                  {renderedElement.type === 'button' && (
-                    <button className="msp-w-full msp-h-full">{renderedElement.content}</button>
-                  )}
+                  {renderedElement.type === 'button' && (() => {
+                    const href = resolveButtonHref(renderedElement.buttonLink);
+                    const target = resolveButtonTarget(renderedElement.buttonLinkTarget);
+                    return href ? (
+                      <a
+                        href={href}
+                        target={target}
+                        rel={target === '_blank' ? 'noreferrer noopener' : undefined}
+                        className="msp-flex msp-h-full msp-w-full msp-items-center msp-justify-center"
+                      >
+                        {renderedElement.content}
+                      </a>
+                    ) : (
+                      <button className="msp-w-full msp-h-full">{renderedElement.content}</button>
+                    );
+                  })()}
                   {renderedElement.type === 'box' && <div className="msp-w-full msp-h-full" />}
                 </motion.div>
               </React.Fragment>

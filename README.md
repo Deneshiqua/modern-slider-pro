@@ -205,6 +205,13 @@ Portals attach to ``document.body`` with high **z-index** values (near **100 0
 
 ## Changelog
 
+### 0.9.0 — 2026-06-16
+- **Added**: Button link support on slide buttons (`buttonLink`) with URL normalization in `SliderRunner` (auto-prefixes `https://` when needed).
+- **Added**: Button link target option (`buttonLinkTarget`) — choose **same tab** (`_self`) or **new tab** (`_blank`) from a dedicated **Link** accordion in Properties.
+- **Added**: New **Layout** accordion in Properties; text alignment and element alignment controls moved from **Content** into this section.
+- **Added**: Properties accordion state persistence — open/closed sections are saved and restored across reloads.
+- **Improved**: Properties panel structure — content, layout, color, style, animation, spacing, and button link settings are separated more clearly.
+
 ### 0.8.0 — 2026-06-11
 - **Added**: **`canvasHeightMode`** on `CanvasSettings` — `fixed` (default), `responsive` (aspect-ratio + `max-height: canvasHeight`), or `fitBackground` (shrink runner to contained image aspect ratio, capped at `canvasHeight`). Configured in **Canvas settings → Site height behavior**.
 - **Added**: **`onOpenMediaPicker`** on `SliderEditor` — host apps inject a file manager; types `MediaPickerHandler`, `MediaPickerRequest`, context `MediaPickerContext`.

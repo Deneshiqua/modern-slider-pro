@@ -54,6 +54,10 @@ export interface EditorElement {
   isLocked?: boolean;
   isVisible?: boolean;
   content: string; // For text: text content, For image/video: URL
+  /** Optional URL used when this element type is `button`. */
+  buttonLink?: string;
+  /** Link target used when this element type is `button`. */
+  buttonLinkTarget?: '_self' | '_blank';
   x: number;
   y: number;
   rotation?: number; // degrees 0-360
