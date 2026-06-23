@@ -113,6 +113,9 @@ dependencies:
   input-otp:
     specifier: ^1.2.4
     version: 1.4.2(react-dom@19.1.1)(react@19.1.1)
+  jquery:
+    specifier: ^4.0.0
+    version: 4.0.0
   lucide-react:
     specifier: ^0.462.0
     version: 0.462.0(react@19.1.1)
@@ -158,6 +161,9 @@ dependencies:
   tailwindcss-animate:
     specifier: ^1.0.7
     version: 1.0.7(tailwindcss@3.4.17)
+  trumbowyg:
+    specifier: ^2.31.0
+    version: 2.31.0(jquery@4.0.0)
   uuid:
     specifier: ^10.0.0
     version: 10.0.0
@@ -193,6 +199,9 @@ devDependencies:
   '@tanstack/react-query':
     specifier: ^5.56.2
     version: 5.83.0(react@19.1.1)
+  '@types/jquery':
+    specifier: ^4.0.1
+    version: 4.0.1
   '@types/node':
     specifier: ^22.5.5
     version: 22.16.5
@@ -3795,6 +3804,10 @@ packages:
     resolution: {integrity: sha512-dWHzHa2WqEXI/O1E9OjrocMTKJl2mSrEolh1Iomrv6U+JuNwaHXsXx9bLu5gG7BUWFIN0skIQJQ/L1rIex4X6w==}
     dev: true
 
+  /@types/jquery@4.0.1:
+    resolution: {integrity: sha512-9a59A/tycXgYuPABcp6/3spSShn0NT2UOM4EfHvMumjYi4lJWTsK5SZWjhx3yRm9IHGCeWXdV2YfNsrWrft/CA==}
+    dev: true
+
   /@types/json-schema@7.0.15:
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
     dev: true
@@ -5041,6 +5054,10 @@ packages:
     resolution: {integrity: sha512-/imKNG4EbWNrVjoNC/1H5/9GFy+tqjGBHCaSsN+P2RnPqjsLmv6UD3Ej+Kj8nBWaRAwyk7kK5ZUc+OEatnTR3A==}
     hasBin: true
 
+  /jquery@4.0.0:
+    resolution: {integrity: sha512-TXCHVR3Lb6TZdtw1l3RTLf8RBWVGexdxL6AC8/e0xZKEpBflBsjh9/8LXw+dkNFuOyW9B7iB3O1sP7hS0Kiacg==}
+    dev: false
+
   /js-tokens@4.0.0:
     resolution: {integrity: sha512-RdJUflcE3cUzKiMqQgsCu06FPu9UdIJO0beYbPhHN4k6apgJtifcoCtT9bcxOpYBtpD2kCM6Sbzg4CausW/PKQ==}
 
@@ -6124,6 +6141,14 @@ packages:
     engines: {node: '>=8.0'}
     dependencies:
       is-number: 7.0.0
+
+  /trumbowyg@2.31.0(jquery@4.0.0):
+    resolution: {integrity: sha512-I+DMiluTpLDx3yn6LR0TIVR7xIOjgtBQmpEE6Ofd+2yl5ruzY63q/yA/DfBuRVxdK7yDYSBe9FXpVjM1P2NdtA==}
+    peerDependencies:
+      jquery: '>=1.8'
+    dependencies:
+      jquery: 4.0.0
+    dev: false
 
   /ts-api-utils@2.1.0(typescript@5.8.3):
     resolution: {integrity: sha512-CUgTZL1irw8u29bzrOD/nH85jqyc74D6SshFgujOIA7osm2Rz7dYH77agkx7H4FBNxDq7Cjf+IjaX/8zwFW+ZQ==}

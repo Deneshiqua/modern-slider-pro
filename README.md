@@ -22,7 +22,10 @@ A visual drag-and-drop slider/carousel builder and runner for React. Design anim
 - 📏 Optional Photoshop-style canvas rulers with **live pointer readout** on the rulers (Canvas settings)
 - ⊞ **Fit to viewport** zoom in the canvas toolbar — scale the slide into the visible area
 - 🌗 Dark / light theme ready — all styles scoped with ``msp-`` prefix (zero conflict)
-- 💾 Versioned project JSON import / export
+- 💾 Versioned project JSON import / export — **Monaco Editor** in export/import dialogs
+- ✏️ **Rich text** editing for text elements (Trumbowyg); HTML renders in preview and `SliderRunner`
+- 🌐 Built-in **EN / TR** UI strings; `LanguageProvider` with optional `storageKey` and browser-language default
+- 🌗 **ThemeProvider** follows OS light/dark until the user picks a theme; optional `storageKey` persistence
 - ↩️ **Undo / redo** — slide-scoped history (other slides are unaffected); global undo for project-wide changes; **Reset slide** next to undo when the active slide has edits
 - ↩️ Keyboard **Ctrl+Z** / **Ctrl+Y** (⌘ on macOS); layer selection is kept when the undo still leaves those elements on the slide
 - 🔒 Rename, hide and lock layers
@@ -204,6 +207,21 @@ Portals attach to ``document.body`` with high **z-index** values (near **100 0
 ---
 
 ## Changelog
+
+### 0.10.0 — 2026-06-24
+- **Added**: **Trumbowyg** rich-text editor for **text** element content in the Properties panel; `SliderRunner` and canvas preview render HTML via `TextElementContent`.
+- **Added**: **Monaco Editor** for JSON **Export** / **Import** dialogs (`JsonCodeEditor`); bundled worker setup via `monacoEnv`.
+- **Added**: `LanguageProvider` **`storageKey`** — UI language defaults from `navigator.languages`; persisted only after the user explicitly switches language.
+- **Added**: `ThemeProvider` improvements — **`useSystemTheme`** follows `prefers-color-scheme` (with live OS updates) until the user toggles theme; explicit choice stored under `storageKey`.
+- **Improved**: **`SliderEditor`** — `useSystemTheme` defaults to `true`, `defaultTheme` to `light`, shared `msp-theme` / `msp-language` keys; `themeStorageKey` prop on embed.
+- **Improved**: Editor **performance** — snap guides moved to `SnapGuidesProvider`; timeline panel lazy/deferred mount; canvas auto fit-to-viewport; lighter file watching in dev.
+- **Improved**: Canvas **keyboard shortcuts** ignored while editing in Trumbowyg, Monaco, or `contenteditable` (`editorKeyboardTarget`).
+- **Improved**: **Button** label field uses multiline `Textarea`; text HTML stripped for layout metrics in `groupBounds`.
+- **Fixed**: **Context menu** stacking above nested dialogs/overlays (z-index + `[data-radix-context-menu-content]` CSS).
+- **Fixed**: **Properties** content accordion could not close (`forceMount` removed).
+- **Fixed**: Layer selection lost when deleting text inside Trumbowyg.
+- **Fixed**: In-app **toasts** use package `ThemeContext` (dark/light aware).
+- **Demo site** (dev app): shared **SiteLayout** (header/footer), TR/EN + theme on all pages, docs expanded, demo **Save** publishes slides to live `SliderRunner` preview, inline editor uses fullscreen shell (not modal) so portaled menus and Monaco work reliably.
 
 ### 0.8.0 — 2026-06-11
 - **Added**: **`canvasHeightMode`** on `CanvasSettings` — `fixed` (default), `responsive` (aspect-ratio + `max-height: canvasHeight`), or `fitBackground` (shrink runner to contained image aspect ratio, capped at `canvasHeight`). Configured in **Canvas settings → Site height behavior**.

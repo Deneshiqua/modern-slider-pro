@@ -1,8 +1,8 @@
-import { Check, ChevronRight, Copy } from 'lucide-react';
+import { Check, Copy } from 'lucide-react';
 import React, { useState } from 'react';
 
-import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import SiteLayout from '@/components/SiteLayout';
+import { SITE_CONTAINER_CLASS } from '@/components/siteContainer';
 import { cn } from '@/lib/utils';
 
 /* -------------------------------------------------------------------------- */
@@ -86,6 +86,12 @@ const PropTable = ({
     </div>
 );
 
+const Callout = ({ children }: { children: React.ReactNode }) => (
+    <div className="msp-not-prose msp-mt-4 msp-rounded-lg msp-border msp-border-amber-200 msp-bg-amber-50 dark:msp-border-amber-900 dark:msp-bg-amber-950/30 msp-px-4 msp-py-3 msp-text-sm msp-text-amber-800 dark:msp-text-amber-300">
+        {children}
+    </div>
+);
+
 /* -------------------------------------------------------------------------- */
 /*  Sidebar nav items                                                           */
 /* -------------------------------------------------------------------------- */
@@ -95,6 +101,8 @@ const NAV = [
     { id: 'slider-editor', label: 'SliderEditor' },
     { id: 'slider-runner', label: 'SliderRunner' },
     { id: 'use-editor', label: 'useEditor Hook' },
+    { id: 'theming', label: 'Theme & Language' },
+    { id: 'media-picker', label: 'Media Picker' },
     { id: 'types', label: 'Types' },
     { id: 'styling', label: 'Styling' },
 ];
@@ -104,30 +112,8 @@ const NAV = [
 /* -------------------------------------------------------------------------- */
 const DocsPage = () => {
     return (
-        <div className="msp-min-h-screen msp-bg-background msp-text-foreground">
-            {/* Top nav */}
-            <header className="msp-border-b msp-sticky msp-top-0 msp-z-10 msp-bg-background/80 msp-backdrop-blur">
-                <div className="msp-max-w-7xl msp-mx-auto msp-px-6 msp-h-14 msp-flex msp-items-center msp-justify-between">
-                    <Link to="/" className="msp-font-bold msp-text-lg msp-tracking-tight">
-                        modern-slider-pro
-                    </Link>
-                    <nav className="msp-flex msp-items-center msp-gap-2">
-                        <Button variant="ghost" size="sm" asChild>
-                            <Link to="/demo">Demo</Link>
-                        </Button>
-                        <Button variant="ghost" size="sm" asChild>
-                            <Link to="/docs">Docs</Link>
-                        </Button>
-                        <Button size="sm" asChild>
-                            <Link to="/editor">
-                                Open Editor <ChevronRight className="msp-ml-1 msp-h-4 msp-w-4" />
-                            </Link>
-                        </Button>
-                    </nav>
-                </div>
-            </header>
-
-            <div className="msp-max-w-7xl msp-mx-auto msp-px-6 msp-flex msp-gap-10 msp-py-10">
+        <SiteLayout>
+            <div className={cn(SITE_CONTAINER_CLASS, 'msp-flex msp-gap-10 msp-py-10')}>
                 {/* Sidebar */}
                 <aside className="msp-hidden lg:msp-block msp-w-52 msp-shrink-0">
                     <nav className="msp-sticky msp-top-24 msp-space-y-1">
@@ -148,105 +134,149 @@ const DocsPage = () => {
 
                 {/* Content */}
                 <main className="msp-min-w-0 msp-flex-1 msp-prose msp-prose-neutral dark:msp-prose-invert msp-max-w-none">
-                    {/* Hero */}
                     <div className="msp-not-prose msp-mb-10">
                         <h1 className="msp-text-4xl msp-font-bold msp-mb-3">Documentation</h1>
                         <p className="msp-text-muted-foreground msp-text-lg">
-                            Everything you need to embed a visual slider builder and runner in your React project.
+                            Embed the visual slider builder and lightweight runtime in your React app.
                         </p>
                     </div>
 
-                    {/* ---------------------------------------------------------------- */}
                     <SectionHeading id="installation">Installation</SectionHeading>
-                    <p className="msp-text-muted-foreground msp-mb-4">Install the package and its peer dependencies:</p>
-                    <CodeBlock language="bash" code={`npm install modern-slider-pro framer-motion
+                    <p className="msp-text-muted-foreground msp-mb-4">
+                        Install the package and its <strong>peer dependencies</strong>:
+                    </p>
+                    <CodeBlock language="bash" code={`npm install modern-slider-pro react react-dom framer-motion
 # or
-pnpm add modern-slider-pro framer-motion
-# or
-yarn add modern-slider-pro framer-motion`} />
+pnpm add modern-slider-pro react react-dom framer-motion`} />
 
-                    <p className="msp-text-muted-foreground msp-mt-4 msp-mb-4">Import the bundled CSS in your app's entry file:</p>
+                    <p className="msp-text-muted-foreground msp-mt-4 msp-mb-4">
+                        Import the bundled CSS once in your app entry:
+                    </p>
                     <CodeBlock language="tsx" code={`// main.tsx or index.tsx
 import 'modern-slider-pro/style.css';`} />
 
-                    {/* ---------------------------------------------------------------- */}
                     <SectionHeading id="quick-start">Quick Start</SectionHeading>
 
-                    <SubHeading id="qs-editor">Embed the full editor</SubHeading>
+                    <SubHeading id="qs-editor">Embed the editor and save project JSON</SubHeading>
                     <CodeBlock language="tsx" code={`import { SliderEditor } from 'modern-slider-pro';
+import type { SliderEditorSavePayload } from 'modern-slider-pro';
 import 'modern-slider-pro/style.css';
 
 export default function App() {
+  const handleSave = async (payload: SliderEditorSavePayload) => {
+    await fetch('/api/sliders/homepage', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  };
+
   return (
     <div style={{ height: '100vh' }}>
-      <SliderEditor />
+      <SliderEditor onSave={handleSave} saveButtonLabel="Save Slider" />
     </div>
   );
 }`} />
 
-                    <SubHeading id="qs-runner">Render a slider from saved data</SubHeading>
+                    <SubHeading id="qs-runner">Render from saved project data</SubHeading>
                     <CodeBlock language="tsx" code={`import { SliderRunner } from 'modern-slider-pro';
-import type { Slide } from 'modern-slider-pro';
+import type { SliderProject } from 'modern-slider-pro';
 import 'modern-slider-pro/style.css';
 
-// slides JSON exported from the editor
-import slidesData from './my-slides.json';
+import projectJson from './homepage-slider.json';
+
+const project = projectJson as SliderProject;
 
 export default function HeroSection() {
-  return (
-    <SliderRunner
-      slides={slidesData as Slide[]}
-      autoPlay
-      interval={5000}
-      height="500px"
-    />
-  );
+  return <SliderRunner project={project} width="100%" />;
 }`} />
 
-                    {/* ---------------------------------------------------------------- */}
+                    <Callout>
+                        <strong>Tip:</strong> Use the toolbar <em>Export</em> button in the editor to download versioned JSON
+                        ({'{ slides, settings, canvasSettings }'}). Pass it to <code className="msp-text-xs msp-bg-amber-100 dark:msp-bg-amber-900 msp-px-1 msp-rounded">SliderRunner</code> via the{' '}
+                        <code className="msp-text-xs msp-bg-amber-100 dark:msp-bg-amber-900 msp-px-1 msp-rounded">project</code> prop.
+                        Legacy slide-only arrays still work via <code className="msp-text-xs msp-bg-amber-100 dark:msp-bg-amber-900 msp-px-1 msp-rounded">slides</code>.
+                    </Callout>
+
                     <SectionHeading id="slider-editor">SliderEditor</SectionHeading>
                     <p className="msp-text-muted-foreground msp-mb-4">
-                        A fully self-contained visual editor. It manages its own state internally via{' '}
-                        <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">EditorProvider</code>.
+                        Full drag-and-drop editor. Mounts its own providers (theme, language, editor state, tooltips).
+                        No wrapper setup required for the default experience.
                     </p>
 
                     <PropTable rows={[
-                        { name: '—', type: '—', description: 'No props required. The editor is fully self-contained.' },
+                        { name: 'onSave', type: '(payload: SliderEditorSavePayload) => void | Promise<void>', description: 'Called when the user saves. Receives versioned project JSON.' },
+                        { name: 'onDemoSave', type: '(slides: Slide[]) => void', description: 'Legacy callback — slides only, no settings/canvas.' },
+                        { name: 'saveButtonLabel', type: 'string', description: 'Custom label for the save/export toolbar button.' },
+                        { name: 'initialSlides', type: 'Slide[]', description: 'Pre-load slide data.' },
+                        { name: 'initialSettings', type: 'SliderSettings', description: 'Pre-load slider playback settings.' },
+                        { name: 'initialCanvasSettings', type: 'CanvasSettings', description: 'Pre-load canvas size, grid, rulers, height mode, etc.' },
+                        { name: 'onOpenMediaPicker', type: 'MediaPickerHandler', description: 'Replace the built-in media library with your own file manager.' },
+                        { name: 'language', type: "'en' | 'tr'", description: 'Controlled UI language.' },
+                        { name: 'defaultLanguage', type: "'en' | 'tr'", description: 'Initial language when uncontrolled.' },
+                        { name: 'onLanguageChange', type: '(lang) => void', description: 'Fired when the user changes language in settings.' },
+                        { name: 'theme', type: "'light' | 'dark'", description: 'Controlled theme.' },
+                        { name: 'defaultTheme', type: "'light' | 'dark'", default: 'system', description: 'Initial theme when uncontrolled. Defaults to system preference.' },
+                        { name: 'onThemeChange', type: '(theme) => void', description: 'Fired when the user toggles theme.' },
+                        { name: 'themeStorageKey', type: 'string', default: 'msp-theme', description: 'localStorage key for persisting an explicit theme choice.' },
+                        { name: 'useSystemTheme', type: 'boolean', default: 'true', description: 'Follow OS light/dark until the user picks a theme.' },
+                        { name: 'showToaster', type: 'boolean', default: 'true', description: 'Show in-editor toast notifications (clipboard, etc.).' },
+                        { name: 'className', type: 'string', description: 'Extra class on the editor root shell.' },
                     ]} />
 
-                    <div className="msp-not-prose msp-mt-4 msp-rounded-lg msp-border msp-border-amber-200 msp-bg-amber-50 dark:msp-border-amber-900 dark:msp-bg-amber-950/30 msp-px-4 msp-py-3 msp-text-sm msp-text-amber-800 dark:msp-text-amber-300">
-                        <strong>Tip:</strong> Use the toolbar's <em>Export</em> button to download your slides as a JSON file,
-                        then feed it to <code className="msp-text-xs msp-bg-amber-100 dark:msp-bg-amber-900 msp-px-1 msp-rounded">SliderRunner</code>.
-                    </div>
+                    <SubHeading id="save-payload">Save payload</SubHeading>
+                    <CodeBlock language="ts" code={`type SliderEditorSavePayload = {
+  version: 1;
+  slides: Slide[];
+  settings: SliderSettings;
+  canvasSettings: CanvasSettings;
+};`} />
 
-                    {/* ---------------------------------------------------------------- */}
                     <SectionHeading id="slider-runner">SliderRunner</SectionHeading>
                     <p className="msp-text-muted-foreground msp-mb-4">
-                        Lightweight display-only component. Renders slides with full animation support.
+                        Lightweight display-only component. Renders slides with entrance animations, slide transitions,
+                        progress bar, arrows, dots, and responsive scaling. Pauses autoplay while hovered.
                     </p>
 
                     <PropTable rows={[
-                        { name: 'slides', type: 'Slide[]', description: 'Array of slide objects (exported from the editor or defined in code).' },
-                        { name: 'autoPlay', type: 'boolean', default: 'true', description: 'Automatically advance to the next slide.' },
-                        { name: 'interval', type: 'number', default: '5000', description: 'Auto-play interval in milliseconds.' },
-                        { name: 'width', type: 'string | number', default: '"100%"', description: 'CSS width of the slider container.' },
-                        { name: 'height', type: 'string | number', default: '"600px"', description: 'CSS height of the slider container.' },
+                        { name: 'project', type: 'SliderProject', description: 'Preferred — full exported project (slides + settings + canvas).' },
+                        { name: 'slides', type: 'Slide[]', description: 'Legacy slide-only data when no project is provided.' },
+                        { name: 'autoPlay', type: 'boolean', description: 'Overrides project/settings autoplay when set.' },
+                        { name: 'interval', type: 'number', description: 'Autoplay interval in milliseconds (overrides settings when set). Settings store seconds.' },
+                        { name: 'showDots', type: 'boolean', description: 'Overrides project dot navigation setting.' },
+                        { name: 'showArrows', type: 'boolean', description: 'Overrides project arrow navigation setting.' },
+                        { name: 'showProgressBar', type: 'boolean', description: 'Overrides project progress bar setting.' },
+                        { name: 'width', type: 'string | number', default: '100%', description: 'Container width. With project, defaults to canvas width logic.' },
+                        { name: 'height', type: 'string | number', description: 'Explicit height — mainly for fixed canvasHeightMode or legacy slides prop.' },
+                        { name: 'viewMode', type: "'desktop' | 'tablet' | 'mobile'", default: 'desktop', description: 'Which responsive element overrides to apply.' },
+                        { name: 'onSlideChange', type: '(index: number) => void', description: 'Called when the active slide index changes.' },
                     ]} />
 
-                    {/* ---------------------------------------------------------------- */}
+                    <SubHeading id="runner-height">Site height behavior</SubHeading>
+                    <p className="msp-text-muted-foreground msp-mb-4">
+                        When using <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">project</code>, outer height comes from{' '}
+                        <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">canvasSettings.canvasHeightMode</code>:
+                    </p>
+                    <PropTable rows={[
+                        { name: 'fixed', type: '—', description: 'Always use canvasHeight (px).' },
+                        { name: 'responsive', type: '—', description: 'Width 100%, aspect ratio from canvas dimensions, max-height = canvasHeight.' },
+                        { name: 'fitBackground', type: '—', description: 'When background image uses contain, height follows image aspect ratio up to canvasHeight.' },
+                    ]} />
+
                     <SectionHeading id="use-editor">useEditor Hook</SectionHeading>
                     <p className="msp-text-muted-foreground msp-mb-4">
-                        Access and mutate editor state from any component inside{' '}
-                        <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">{'<EditorProvider>'}</code>.
+                        For custom UIs, wrap children with <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">EditorProvider</code>{' '}
+                        (or use the built-in <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">SliderEditor</code> shell).
                     </p>
 
-                    <CodeBlock language="tsx" code={`import { EditorProvider, useEditor } from 'modern-slider-pro';
+                    <CodeBlock language="tsx" code={`import { EditorProvider, SliderEditor, useEditor } from 'modern-slider-pro';
 
 function SaveButton() {
-  const { slides } = useEditor();
+  const { slides, settings, canvasSettings } = useEditor();
 
   const handleSave = () => {
-    localStorage.setItem('my-slides', JSON.stringify(slides));
+    const payload = { version: 1 as const, slides, settings, canvasSettings };
+    localStorage.setItem('my-slider', JSON.stringify(payload));
   };
 
   return <button onClick={handleSave}>Save</button>;
@@ -255,104 +285,215 @@ function SaveButton() {
 export default function App() {
   return (
     <EditorProvider>
-      {/* SliderEditor renders the canvas internally */}
+      <SliderEditor showToaster={false} />
       <SaveButton />
     </EditorProvider>
   );
 }`} />
 
-                    <SubHeading id="use-editor-api">Available values &amp; methods</SubHeading>
+                    <SubHeading id="use-editor-state">State</SubHeading>
                     <PropTable rows={[
-                        { name: 'slides', type: 'Slide[]', description: 'All slides in the current project.' },
-                        { name: 'currentSlideIndex', type: 'number', description: 'Index of the active slide.' },
-                        { name: 'selectedElementId', type: 'string | null', description: 'ID of the currently selected element.' },
-                        { name: 'settings', type: 'SliderSettings', description: 'Global slider playback settings.' },
-                        { name: 'addSlide()', type: '() => void', description: 'Append a new blank slide.' },
-                        { name: 'removeSlide(id)', type: '(id: string) => void', description: 'Delete a slide by ID.' },
-                        { name: 'setCurrentSlide(index)', type: '(index: number) => void', description: 'Navigate to a slide.' },
-                        { name: 'addElement(type)', type: '(type: ElementType) => void', description: 'Add an element to the active slide.' },
-                        { name: 'updateElement(id, updates)', type: '(id, Partial<EditorElement>) => void', description: 'Update element properties.' },
-                        { name: 'removeElement(id)', type: '(id: string) => void', description: 'Remove an element from the active slide.' },
-                        { name: 'loadSlides(slides)', type: '(slides: Slide[]) => void', description: 'Replace all slides (e.g. load from JSON).' },
+                        { name: 'slides', type: 'Slide[]', description: 'All slides in the project.' },
+                        { name: 'currentSlideIndex', type: 'number', description: 'Active slide index.' },
+                        { name: 'selectedElementId', type: 'string | null', description: 'Primary selected element.' },
+                        { name: 'selectedElementIds', type: 'string[]', description: 'Multi-selection IDs.' },
+                        { name: 'settings', type: 'SliderSettings', description: 'Autoplay, arrows, dots, transitions, progress bar, etc.' },
+                        { name: 'canvasSettings', type: 'CanvasSettings', description: 'Canvas size, grid, rulers, timeline panel, height mode.' },
+                        { name: 'viewMode', type: 'ViewMode', description: 'desktop | tablet | mobile canvas viewport.' },
+                        { name: 'isPlaying', type: 'boolean', description: 'Toolbar preview mode active.' },
+                        { name: 'isDirty', type: 'boolean', description: 'Unsaved changes since last save marker.' },
+                        { name: 'canUndo / canRedo', type: 'boolean', description: 'History availability (per-slide + global stacks).' },
+                        { name: 'canResetSlide', type: 'boolean', description: 'Active slide can be reset to session baseline.' },
                     ]} />
 
-                    {/* ---------------------------------------------------------------- */}
+                    <SubHeading id="use-editor-actions">Common actions</SubHeading>
+                    <PropTable rows={[
+                        { name: 'addSlide()', type: '() => void', description: 'Append a blank slide.' },
+                        { name: 'removeSlide(id)', type: '(id: string) => void', description: 'Delete a slide.' },
+                        { name: 'setCurrentSlide(index)', type: '(index: number) => void', description: 'Switch active slide.' },
+                        { name: 'addElement(type)', type: '(type: ElementType) => void', description: 'Add text, image, video, button, or box to the active slide.' },
+                        { name: 'updateElement(id, updates)', type: '(id, Partial<EditorElement>) => void', description: 'Patch element properties.' },
+                        { name: 'updateElementForMode(id, updates, mode?)', type: '—', description: 'Patch desktop/tablet/mobile responsive overrides.' },
+                        { name: 'removeElement(id)', type: '(id: string) => void', description: 'Remove element from the active slide tree.' },
+                        { name: 'loadSlides(slides)', type: '(slides: Slide[]) => void', description: 'Replace all slides (e.g. JSON import).' },
+                        { name: 'updateSettings(patch)', type: '(Partial<SliderSettings>) => void', description: 'Update global slider settings.' },
+                        { name: 'updateCanvasSettings(patch)', type: '(Partial<CanvasSettings>) => void', description: 'Update canvas configuration.' },
+                        { name: 'undo() / redo()', type: '() => void', description: 'History navigation.' },
+                        { name: 'resetActiveSlide()', type: '() => void', description: 'Revert active slide to first-edit baseline.' },
+                        { name: 'groupSelectedElements()', type: '() => void', description: 'Group current selection into a box.' },
+                        { name: 'setResponsiveViewport(mode)', type: '(ViewMode) => void', description: 'Sync toolbar viewport + property mode.' },
+                    ]} />
+
+                    <Callout>
+                        The full <code className="msp-text-xs msp-bg-amber-100 dark:msp-bg-amber-900 msp-px-1 msp-rounded">useEditor()</code> API
+                        also exposes layer ordering, clipboard, timeline preview, slide background/overlay helpers, and zoom controls.
+                        See exported TypeScript types in the package for every method.
+                    </Callout>
+
+                    <SectionHeading id="theming">Theme &amp; Language</SectionHeading>
+                    <p className="msp-text-muted-foreground msp-mb-4">
+                        <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">SliderEditor</code> includes{' '}
+                        <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">ThemeProvider</code> and{' '}
+                        <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">LanguageProvider</code> internally.
+                        For host apps building custom chrome, export and compose them:
+                    </p>
+                    <CodeBlock language="tsx" code={`import {
+  ThemeProvider,
+  LanguageProvider,
+  SliderEditor,
+  useTheme,
+  useLanguage,
+} from 'modern-slider-pro';
+
+export function App() {
+  return (
+    <ThemeProvider storageKey="msp-theme" useSystemTheme attachThemeClassToHtml>
+      <LanguageProvider storageKey="msp-language">
+        <SliderEditor />
+      </LanguageProvider>
+    </ThemeProvider>
+  );
+}`} />
+                    <p className="msp-text-muted-foreground msp-mt-4 msp-mb-4">
+                        Supported languages: <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">en</code>,{' '}
+                        <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">tr</code>.
+                        Pass <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">translationsOverride</code> on{' '}
+                        <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">LanguageProvider</code> to customize strings.
+                        Until the user explicitly changes theme or language, defaults follow the OS / browser preference.
+                    </p>
+
+                    <SectionHeading id="media-picker">Media Picker</SectionHeading>
+                    <p className="msp-text-muted-foreground msp-mb-4">
+                        By default the editor can use a built-in Supabase media library when env vars are configured.
+                        For production apps, wire your own asset manager:
+                    </p>
+                    <CodeBlock language="tsx" code={`import type { MediaPickerHandler, MediaPickerRequest } from 'modern-slider-pro';
+
+const openMediaPicker: MediaPickerHandler = (request: MediaPickerRequest) => {
+  // Open your file manager UI, then call:
+  request.onSelect('https://cdn.example.com/hero.jpg');
+};
+
+<SliderEditor onOpenMediaPicker={openMediaPicker} />`} />
+                    <p className="msp-text-muted-foreground msp-mt-4 msp-mb-4">
+                        <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">request.purpose</code> is{' '}
+                        <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">'image'</code> or{' '}
+                        <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">'video'</code>.
+                        Call <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">request.onCancel()</code> if the user dismisses the picker.
+                    </p>
+
                     <SectionHeading id="types">Types</SectionHeading>
+
+                    <SubHeading id="types-project">SliderProject</SubHeading>
+                    <CodeBlock language="ts" code={`interface SliderProject {
+  version: 1;
+  slides: Slide[];
+  settings: SliderSettings;
+  canvasSettings: CanvasSettings;
+}`} />
 
                     <SubHeading id="types-slide">Slide</SubHeading>
                     <CodeBlock language="ts" code={`interface Slide {
   id: string;
-  backgroundColor: string;    // hex / rgb
-  backgroundImage: string;    // URL
-  backgroundVideo: string;    // URL
+  backgroundColor: string;
+  backgroundImage: string;
+  backgroundVideo: string;
   backgroundType: 'color' | 'image' | 'video';
-  background: string;         // legacy (same as active value)
+  background: string;              // legacy mirror of active background value
+  backgroundFit?: 'cover' | 'contain' | 'fill' | 'none';
+  overlayEnabled?: boolean;
+  overlayColor?: string;
+  overlayOpacity?: number;         // 0–1
   elements: EditorElement[];
+  timeline?: { duration: number }; // slide timeline length (seconds)
 }`} />
 
                     <SubHeading id="types-element">EditorElement</SubHeading>
                     <CodeBlock language="ts" code={`interface EditorElement {
   id: string;
   type: 'text' | 'image' | 'button' | 'box' | 'video';
-  content: string;          // text content or media URL
-  x: number;                // px from left
-  y: number;                // px from top
-  style: React.CSSProperties & {
-    objectFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down';
-  };
+  name?: string;
+  content: string;                 // text/HTML, label, or media URL
+  x: number;
+  y: number;
+  rotation?: number;
+  isLocked?: boolean;
+  isVisible?: boolean;
+  style: React.CSSProperties & { objectFit?: 'cover' | 'contain' | 'fill' | 'none' | 'scale-down' };
+  hoverStyle?: Partial<Pick<React.CSSProperties, 'backgroundColor' | 'color' | /* border colors */>>;
+  responsive?: Partial<Record<'desktop' | 'tablet' | 'mobile', {
+    x?: number; y?: number; rotation?: number; style?: object; hoverStyle?: object;
+  }>>;
   animation?: AnimationConfig;
+  timelineClip?: { start: number; end: number };
   children?: EditorElement[];
-}`} />
-
-                    <SubHeading id="types-animation">AnimationConfig</SubHeading>
-                    <CodeBlock language="ts" code={`interface AnimationConfig {
-  name: string;
-  initial: TargetAndTransition | VariantLabels | boolean;
-  animate: TargetAndTransition | VariantLabels | boolean;
-  transition: Transition;  // framer-motion Transition
+  isGroup?: boolean;
 }`} />
 
                     <SubHeading id="types-settings">SliderSettings</SubHeading>
                     <CodeBlock language="ts" code={`interface SliderSettings {
   autoPlay: boolean;
-  interval: number;   // seconds
+  interval: number;                // seconds
   loop: boolean;
   showArrows: boolean;
   showDots: boolean;
+  showProgressBar: boolean;
+  progressBarColor: string;
+  progressBarOpacity: number;        // 0–1
+  progressBarTrackOpacity: number;
+  progressBarScope: 'perSlide' | 'allSlides';
+  progressBarHeight: number;       // 1–5 px
+  slideTransitionEnabled: boolean;
+  slideTransition: 'none' | 'fade' | 'slide' | 'slideUp' | 'zoom';
+  slideTransitionDuration: number;   // seconds
 }`} />
 
-                    {/* ---------------------------------------------------------------- */}
+                    <SubHeading id="types-canvas">CanvasSettings</SubHeading>
+                    <CodeBlock language="ts" code={`interface CanvasSettings {
+  gridSize: number;
+  showGrid: boolean;
+  showRulers: boolean;
+  snapToElements: boolean;
+  showCenterGuides: boolean;
+  showTimeline: boolean;
+  canvasWidth: number;
+  canvasHeight: number;
+  canvasHeightMode?: 'fixed' | 'responsive' | 'fitBackground';
+}`} />
+
+                    <SubHeading id="types-constants">Exported constants &amp; helpers</SubHeading>
+                    <p className="msp-text-muted-foreground msp-mb-4">
+                        Useful when building custom tooling around the same data model:
+                    </p>
+                    <CodeBlock language="ts" code={`import {
+  DEFAULT_SLIDE,
+  DEFAULT_SLIDER_SETTINGS,
+  DEFAULT_CANVAS_SETTINGS,
+  ANIMATION_PRESETS,
+  resolveRunnerContainerStyle,
+  normalizeSliderSettings,
+  getSlideBackgroundFit,
+  getSlideOverlayStyle,
+} from 'modern-slider-pro';`} />
+
                     <SectionHeading id="styling">Styling</SectionHeading>
                     <p className="msp-text-muted-foreground msp-mb-4">
-                        The editor and runner use <strong>Tailwind CSS</strong> classes internally. The compiled CSS is
-                        included in <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">dist/style.css</code>.
+                        All internal Tailwind classes use the <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">msp-</code> prefix
+                        (e.g. <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">msp-flex</code>) so they do not clash with your app CSS.
+                        Theme variables are scoped under <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">.msp-slider-pro</code> — you do not need
+                        to patch your global <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">:root</code> theme.
                     </p>
-
                     <p className="msp-text-muted-foreground msp-mb-4">
-                        If your project already uses Tailwind, you can skip importing the CSS file and instead add
-                        the package to your <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">content</code> paths so
-                        your build picks up the classes:
+                        Import the compiled stylesheet once:
                     </p>
-
-                    <CodeBlock language="js" code={`// tailwind.config.js
-module.exports = {
-  content: [
-    './src/**/*.{ts,tsx}',
-    './node_modules/modern-slider-pro/dist/**/*.{js,mjs}',
-  ],
-  // ...
-};`} />
-
-                    <div className="msp-not-prose msp-mt-12 msp-pt-8 msp-border-t msp-text-sm msp-text-muted-foreground msp-flex msp-justify-between msp-items-center">
-                        <span>modern-slider-pro — MIT License</span>
-                        <div className="msp-flex msp-gap-4">
-                            <Link to="/demo" className="hover:msp-text-foreground msp-transition-colors">Demo</Link>
-                            <Link to="/" className="hover:msp-text-foreground msp-transition-colors">Editor</Link>
-                        </div>
-                    </div>
+                    <CodeBlock language="tsx" code={`import 'modern-slider-pro/style.css';`} />
+                    <p className="msp-text-muted-foreground msp-mt-4 msp-mb-4">
+                        No <code className="msp-text-xs msp-bg-muted msp-px-1 msp-rounded">tailwind.config</code> changes are required in the host app.
+                        Portaled UI (dialogs, selects, menus) uses elevated z-index tokens so overlays work inside embedded layouts.
+                    </p>
                 </main>
             </div>
-        </div>
+        </SiteLayout>
     );
 };
 

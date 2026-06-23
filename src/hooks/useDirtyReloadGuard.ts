@@ -1,14 +1,11 @@
 import type { TranslationKey } from '@/context/LanguageContext';
+import { isEditorTextInputTarget } from '@/lib/editorKeyboardTarget';
 import React from 'react';
 import { toast } from 'sonner';
 
 export const UNSAVED_RELOAD_TOAST_MS = 5000;
 
-const isEditableTarget = (target: EventTarget | null) => {
-  if (!(target instanceof HTMLElement)) return false;
-  const tagName = target.tagName.toLowerCase();
-  return target.isContentEditable || ['input', 'textarea', 'select'].includes(tagName);
-};
+const isEditableTarget = isEditorTextInputTarget;
 
 const isReloadShortcut = (event: KeyboardEvent) => {
   if (event.key === 'F5') return true;

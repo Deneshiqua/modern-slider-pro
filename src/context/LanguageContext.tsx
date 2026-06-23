@@ -1,5 +1,5 @@
 import { Language, translations } from '@/lib/translations';
-import React, { createContext, useCallback, useContext, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
 
 export type TranslationKey = keyof typeof translations['en'];
 export type TranslationDictionary = Record<Language, Partial<Record<TranslationKey, string>>>;
@@ -20,11 +20,37 @@ export type LanguageProviderProps = {
   language?: Language;
   onLanguageChange?: (language: Language) => void;
   translationsOverride?: Partial<TranslationDictionary>;
+  storageKey?: string;
 };
 
 const getBrowserLanguage = (): Language => {
   if (typeof navigator === 'undefined') return 'en';
-  return navigator.language.toLowerCase().startsWith('tr') ? 'tr' : 'en';
+  const languages = navigator.languages?.length ? navigator.languages : [navigator.language];
+  for (const lang of languages) {
+    const lower = lang.toLowerCase();
+    if (lower.startsWith('tr')) return 'tr';
+    if (lower.startsWith('en')) return 'en';
+  }
+  return 'en';
+};
+
+const getInitialLanguage = (defaultLanguage: Language | undefined, storageKey?: string): Language => {
+  if (globalThis.window === undefined) return defaultLanguage ?? 'en';
+
+  if (storageKey) {
+    const savedLanguage = globalThis.localStorage.getItem(storageKey) as Language | null;
+    if (savedLanguage === 'en' || savedLanguage === 'tr') {
+      return savedLanguage;
+    }
+  }
+
+  return defaultLanguage ?? getBrowserLanguage();
+};
+
+const hasStoredLanguage = (storageKey?: string): boolean => {
+  if (!storageKey || globalThis.window === undefined) return false;
+  const saved = globalThis.localStorage.getItem(storageKey);
+  return saved === 'en' || saved === 'tr';
 };
 
 export const LanguageProvider: React.FC<LanguageProviderProps> = ({
@@ -33,9 +59,11 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
   language: controlledLanguage,
   onLanguageChange,
   translationsOverride = EMPTY_TRANSLATIONS_OVERRIDE,
+  storageKey,
 }) => {
-  const [uncontrolledLanguage, setUncontrolledLanguage] = useState<Language>(() => defaultLanguage ?? getBrowserLanguage());
+  const [uncontrolledLanguage, setUncontrolledLanguage] = useState<Language>(() => getInitialLanguage(defaultLanguage, storageKey));
   const language = controlledLanguage ?? uncontrolledLanguage;
+  const userSetLanguageRef = useRef(hasStoredLanguage(storageKey));
 
   const mergedTranslations = useMemo(() => ({
     en: { ...translations.en, ...(translationsOverride.en ?? EMPTY_LANGUAGE_TRANSLATIONS) },
@@ -46,8 +74,12 @@ export const LanguageProvider: React.FC<LanguageProviderProps> = ({
     if (controlledLanguage === undefined) {
       setUncontrolledLanguage(nextLanguage);
     }
+    userSetLanguageRef.current = true;
+    if (globalThis.window !== undefined && storageKey) {
+      globalThis.localStorage.setItem(storageKey, nextLanguage);
+    }
     onLanguageChange?.(nextLanguage);
-  }, [controlledLanguage, onLanguageChange]);
+  }, [controlledLanguage, onLanguageChange, storageKey]);
 
   const t = useCallback((key: TranslationKey | string) => {
     return mergedTranslations[language][key as TranslationKey] || key;

@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 
 import ContextMenu from './ContextMenu';
+import TextElementContent from './TextElementContent';
 import { CanvasSettings, EditorElement, ViewMode } from '@/types/editor';
 import { Rnd } from 'react-rnd';
 import { getEditorViewportSize } from '@/lib/constants';
@@ -276,11 +277,7 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
   const renderContent = () => {
     switch (element.type) {
       case 'text':
-        return (
-          <p className="msp-m-0 msp-block msp-min-w-0 msp-w-full msp-p-0 msp-whitespace-pre-wrap msp-indent-0">
-            {renderedElement.content}
-          </p>
-        );
+        return <TextElementContent content={renderedElement.content} />;
       case 'image':
         return (
           <img
@@ -295,7 +292,7 @@ const DraggableElement = ({ element, isPreview = false, staticInGroupLayer = fal
         );
       case 'button':
         return (
-          <button className="msp-w-full msp-h-full msp-flex msp-items-center msp-justify-center msp-pointer-events-none">
+          <button className="msp-w-full msp-h-full msp-flex msp-items-center msp-justify-center msp-whitespace-pre-wrap msp-pointer-events-none">
             {renderedElement.content}
           </button>
         );

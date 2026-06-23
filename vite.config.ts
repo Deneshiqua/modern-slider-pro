@@ -49,6 +49,10 @@ export default defineConfig(({ mode }) => ({
       'react/jsx-runtime',
       'react-virtualized',
       'interactjs',
+      'jquery',
+      'trumbowyg',
+      '@monaco-editor/react',
+      'monaco-editor',
     ],
   },
 }));

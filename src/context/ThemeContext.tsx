@@ -32,6 +32,11 @@ export type ThemeProviderProps = {
   attachThemeClassToHtml?: boolean;
 };
 
+const getSystemTheme = (): Theme => {
+  if (globalThis.window === undefined) return 'light';
+  return globalThis.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+};
+
 const getInitialTheme = (defaultTheme: Theme, storageKey?: string, useSystemTheme?: boolean): Theme => {
   if (globalThis.window === undefined) return defaultTheme;
 
@@ -42,11 +47,17 @@ const getInitialTheme = (defaultTheme: Theme, storageKey?: string, useSystemThem
     }
   }
 
-  if (useSystemTheme && globalThis.matchMedia('(prefers-color-scheme: dark)').matches) {
-    return 'dark';
+  if (useSystemTheme) {
+    return getSystemTheme();
   }
 
   return defaultTheme;
+};
+
+const hasStoredTheme = (storageKey?: string): boolean => {
+  if (!storageKey || globalThis.window === undefined) return false;
+  const saved = globalThis.localStorage.getItem(storageKey);
+  return saved === 'light' || saved === 'dark';
 };
 
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({
@@ -61,6 +72,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   const [uncontrolledTheme, setUncontrolledTheme] = useState<Theme>(() => getInitialTheme(defaultTheme, storageKey, useSystemTheme));
   const [localThemeOverride, setLocalThemeOverride] = useState<Theme | undefined>();
   const theme = localThemeOverride ?? controlledTheme ?? uncontrolledTheme;
+  const userSetThemeRef = useRef(hasStoredTheme(storageKey));
 
   /** Snapshot of the host document before we touch `<html>` (e.g. next-themes). Restored on unmount. */
   const hostHtmlSnapshotRef = useRef<{ hadDark: boolean; colorScheme: string } | null>(null);
@@ -102,9 +114,18 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
   }, [attachThemeClassToHtml, theme]);
 
   useEffect(() => {
-    if (globalThis.window === undefined || !storageKey) return;
-    globalThis.localStorage.setItem(storageKey, theme);
-  }, [storageKey, theme]);
+    if (!useSystemTheme || userSetThemeRef.current || controlledTheme !== undefined) return undefined;
+    if (globalThis.window === undefined) return undefined;
+
+    const mediaQuery = globalThis.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => {
+      if (userSetThemeRef.current) return;
+      setUncontrolledTheme(getSystemTheme());
+    };
+
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [controlledTheme, useSystemTheme]);
 
   const setTheme = useCallback((nextTheme: Theme) => {
     if (controlledTheme === undefined) {
@@ -112,8 +133,12 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({
     } else {
       setLocalThemeOverride(nextTheme);
     }
+    userSetThemeRef.current = true;
+    if (globalThis.window !== undefined && storageKey) {
+      globalThis.localStorage.setItem(storageKey, nextTheme);
+    }
     onThemeChange?.(nextTheme);
-  }, [controlledTheme, onThemeChange]);
+  }, [controlledTheme, onThemeChange, storageKey]);
 
   const value = useMemo(
     () => ({

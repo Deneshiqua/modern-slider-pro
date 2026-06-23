@@ -2,6 +2,7 @@ import { EditorElement, ViewMode } from '@/types/editor';
 import type { LengthUnit } from '@/components/editor/SpacingControls';
 import { readBoxModel } from '@/components/editor/SpacingControls';
 import { resolveElementProperties } from '@/lib/responsive';
+import { htmlToPlainText } from '@/lib/htmlContent';
 
 export type BoundsRect = { minX: number; minY: number; maxX: number; maxY: number };
 
@@ -175,7 +176,10 @@ function inferSizeForBounds(resolved: EditorElement): { w: number; h: number } {
   const fs = Number(resolved.style.fontSize) || 16;
   switch (resolved.type) {
     case 'text': {
-      const raw = displayTextForMetrics(resolved.content, resolved.style.textTransform);
+      const raw = displayTextForMetrics(
+        htmlToPlainText(resolved.content),
+        resolved.style.textTransform,
+      );
       const lines = raw.split('\n').map(line => line.replace(/\r/g, ''));
       const letterGapPx = parseLetterSpacingPx(resolved.style, fs);
       const lineBoxPx = resolveApproxLineBoxPx(resolved.style, fs);
@@ -206,7 +210,10 @@ function inferSizeForBounds(resolved: EditorElement): { w: number; h: number } {
     case 'video':
       return { w: 320, h: 200 };
     case 'button': {
-      const label = displayTextForMetrics(resolved.content || '', resolved.style.textTransform);
+      const label = displayTextForMetrics(
+        htmlToPlainText(resolved.content || ''),
+        resolved.style.textTransform,
+      );
       const len = Math.max([...label].length, 4);
       const padRead = readBoxModel(resolved.style, 'padding');
       const padH = approxPaddingAxisPx(padRead, 'h');

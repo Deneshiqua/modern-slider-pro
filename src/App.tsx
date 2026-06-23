@@ -17,8 +17,8 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <PublishedSlidesProvider>
-      <ThemeProvider>
-        <LanguageProvider>
+      <ThemeProvider storageKey="msp-theme" useSystemTheme attachThemeClassToHtml>
+        <LanguageProvider storageKey="msp-language">
           <TooltipProvider>
             <Toaster />
             <BrowserRouter>

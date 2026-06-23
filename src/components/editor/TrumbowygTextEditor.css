@@ -1,0 +1,118 @@
+.msp-trumbowyg-wrap .trumbowyg-box {
+  margin-top: 0;
+  min-height: 160px;
+  border-color: hsl(var(--border)) !important;
+  background: hsl(var(--card)) !important;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-editor-box {
+  border-color: hsl(var(--border)) !important;
+  background: hsl(var(--background)) !important;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-editor {
+  min-height: 120px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+  background: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-editor-box[contenteditable='true']:empty:not(:focus)::before {
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-button-pane {
+  background: hsl(var(--muted)) !important;
+  border-bottom-color: hsl(var(--border)) !important;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-button-pane::before,
+.msp-trumbowyg-wrap .trumbowyg-button-pane::after,
+.msp-trumbowyg-wrap .trumbowyg-button-group::after {
+  background: hsl(var(--border)) !important;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-box svg {
+  fill: hsl(var(--foreground)) !important;
+  color: hsl(var(--foreground)) !important;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-button-pane button:hover,
+.msp-trumbowyg-wrap .trumbowyg-button-pane button:focus,
+.msp-trumbowyg-wrap .trumbowyg-button-pane button.trumbowyg-active {
+  background: hsl(var(--accent)) !important;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-button-pane .trumbowyg-open-dropdown::after {
+  border-top-color: hsl(var(--foreground)) !important;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-dropdown {
+  border-color: hsl(var(--border)) !important;
+  background: hsl(var(--popover)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+  box-shadow: 0 4px 12px hsl(var(--foreground) / 0.12) !important;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-dropdown button {
+  background: hsl(var(--popover)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-dropdown button:hover,
+.msp-trumbowyg-wrap .trumbowyg-dropdown button:focus {
+  background: hsl(var(--accent)) !important;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-modal-box {
+  background: hsl(var(--card)) !important;
+  color: hsl(var(--card-foreground)) !important;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-modal-box .trumbowyg-modal-title {
+  border-bottom-color: hsl(var(--border)) !important;
+  color: hsl(var(--card-foreground)) !important;
+  background: hsl(var(--muted)) !important;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-modal-box .trumbowyg-input-row {
+  border-color: hsl(var(--border)) !important;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-modal-box .trumbowyg-input-infos {
+  background: hsl(var(--muted)) !important;
+  border-right-color: hsl(var(--border)) !important;
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-modal-box input,
+.msp-trumbowyg-wrap .trumbowyg-modal-box select,
+.msp-trumbowyg-wrap .trumbowyg-modal-box textarea {
+  background: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-overlay {
+  background-color: hsl(var(--background) / 0.55) !important;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-editor p {
+  margin: 0 0 0.5em;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-editor p:last-child {
+  margin-bottom: 0;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-editor a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+}
+
+/* Trumbowyg built-in dark skin — align with MSP tokens when app theme is dark */
+.msp-trumbowyg-wrap.trumbowyg-dark .trumbowyg-box.trumbowyg-fullscreen {
+  background: hsl(var(--background)) !important;
+}

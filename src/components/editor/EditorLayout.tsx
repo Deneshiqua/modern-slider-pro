@@ -18,6 +18,7 @@ import Toolbar from './Toolbar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useDirtyReloadGuard } from '@/hooks/useDirtyReloadGuard';
 import { MediaPickerProvider } from '@/context/MediaPickerContext';
+import { isEditorTextInputTarget } from '@/lib/editorKeyboardTarget';
 import { CanvasSettings, Slide, SliderEditorSavePayload, SliderSettings } from '@/types/editor';
 import type { MediaPickerHandler } from '@/types/mediaPicker';
 import { cn } from '@/lib/utils';
@@ -136,16 +137,8 @@ const EditorShell = ({
   React.useEffect(() => {
     if (globalThis.window === undefined) return;
 
-    const isEditableTarget = (target: EventTarget | null) => {
-      if (!(target instanceof HTMLElement)) return false;
-
-      const tagName = target.tagName.toLowerCase();
-
-      return target.isContentEditable || ['input', 'textarea', 'select'].includes(tagName);
-    };
-
     const handleKeyboardShortcut = (event: KeyboardEvent) => {
-      if (isEditableTarget(event.target)) return;
+      if (isEditorTextInputTarget(event.target) || isEditorTextInputTarget(document.activeElement)) return;
       if (isPlaying) return;
 
       const key = event.key.toLowerCase();
@@ -297,10 +290,10 @@ const EditorLayout = ({
   onLanguageChange,
   translationsOverride,
   theme,
-  defaultTheme = 'dark',
+  defaultTheme = 'light',
   onThemeChange,
-  themeStorageKey,
-  useSystemTheme,
+  themeStorageKey = 'msp-theme',
+  useSystemTheme = true,
   showToaster,
   className,
   onOpenMediaPicker,
@@ -319,6 +312,7 @@ const EditorLayout = ({
         defaultLanguage={defaultLanguage}
         onLanguageChange={onLanguageChange}
         translationsOverride={translationsOverride}
+        storageKey="msp-language"
       >
         <PublishedSlidesProvider initialSlides={initialSlides}>
           <EditorProvider

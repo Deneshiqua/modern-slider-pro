@@ -3,6 +3,7 @@ import { Slide, SliderProject, ViewMode } from '@/types/editor';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { DEFAULT_SLIDER_SETTINGS } from '@/lib/constants';
+import TextElementContent from '@/components/editor/TextElementContent';
 import { resolveElementProperties } from '@/lib/responsive';
 import { formatElementHoverStyleTag } from '@/lib/elementHoverCss';
 import {
@@ -315,9 +316,7 @@ const SliderRunner = ({
                   }}
                 >
                   {renderedElement.type === 'text' && (
-                    <p className="msp-m-0 msp-block msp-min-w-0 msp-w-full msp-p-0 msp-whitespace-pre-wrap msp-indent-0">
-                      {renderedElement.content}
-                    </p>
+                    <TextElementContent content={renderedElement.content} />
                   )}
                   {renderedElement.type === 'image' && (
                     <img
@@ -327,7 +326,7 @@ const SliderRunner = ({
                     />
                   )}
                   {renderedElement.type === 'button' && (
-                    <button className="msp-w-full msp-h-full">{renderedElement.content}</button>
+                    <button className="msp-w-full msp-h-full msp-whitespace-pre-wrap">{renderedElement.content}</button>
                   )}
                   {renderedElement.type === 'box' && <div className="msp-w-full msp-h-full" />}
                 </motion.div>

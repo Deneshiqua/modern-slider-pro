@@ -45,6 +45,10 @@
   z-index: 100450 !important;
 }
 
+[data-radix-context-menu-content] {
+  z-index: 100450 !important;
+}
+
 .msp-slider-pro.msp-dark {
   --background: 222.2 84% 4.9%;
   --foreground: 210 40% 98%;
@@ -73,4 +77,23 @@
   --sidebar-accent-foreground: 240 4.8% 95.9%;
   --sidebar-border: 240 3.7% 15.9%;
   --sidebar-ring: 217.2 91.2% 59.8%;
+}
+
+.msp-rich-text p {
+  margin: 0 0 0.35em;
+}
+
+.msp-rich-text p:last-child {
+  margin-bottom: 0;
+}
+
+.msp-rich-text ul,
+.msp-rich-text ol {
+  margin: 0 0 0.35em;
+  padding-left: 1.25em;
+}
+
+.msp-rich-text a {
+  color: inherit;
+  text-decoration: underline;
 }

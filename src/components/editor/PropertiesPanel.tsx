@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import ColorPicker from './ColorPicker';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { useMediaPicker } from '@/context/MediaPickerContext';
 import { Slider } from "@/components/ui/slider";
 import { Switch } from '@/components/ui/switch';
@@ -26,6 +27,7 @@ import { MultiSelectionAlignmentControls } from './MultiSelectionAlignmentContro
 import { RowAlignmentControls } from './RowAlignmentControls';
 import { ColumnAlignmentControls } from './ColumnAlignmentControls';
 import SpacingControls from './SpacingControls';
+import TrumbowygTextEditor from './TrumbowygTextEditor';
 import { pruneMultiSelectionIds } from '@/lib/alignment';
 
 const PropertiesPanel = () => {
@@ -322,11 +324,25 @@ const PropertiesPanel = () => {
               <AccordionContent className={`${accordionBodyClass} msp-space-y-3`}>
                 <div className="msp-space-y-1">
                   <Label className="msp-text-xs">{t('editor.properties.content')}</Label>
-                  <Input
-                    className="msp-h-7 msp-text-xs"
-                    value={activeElement.content}
-                    onChange={(e) => updateElement(activeElement.id, { content: e.target.value })}
-                  />
+                  {activeElement.type === 'text' ? (
+                    <TrumbowygTextEditor
+                      key={activeElement.id}
+                      value={activeElement.content}
+                      onChange={(html) => updateElement(activeElement.id, { content: html })}
+                    />
+                  ) : activeElement.type === 'button' ? (
+                    <Textarea
+                      className="msp-min-h-[72px] msp-resize-y msp-text-xs"
+                      value={activeElement.content}
+                      onChange={(e) => updateElement(activeElement.id, { content: e.target.value })}
+                    />
+                  ) : (
+                    <Input
+                      className="msp-h-7 msp-text-xs"
+                      value={activeElement.content}
+                      onChange={(e) => updateElement(activeElement.id, { content: e.target.value })}
+                    />
+                  )}
                   {activeElement.type === 'image' ? (
                     <Button
                       variant="outline"

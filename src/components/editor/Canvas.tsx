@@ -14,6 +14,7 @@ import {
 import DraggableElement from './DraggableElement';
 import { CANVAS_RULER_THICKNESS_PX, CanvasViewportRulers } from './CanvasViewportRulers';
 import { cn } from '@/lib/utils';
+import { isEditorTextInputTarget } from '@/lib/editorKeyboardTarget';
 import { resolveElementProperties } from '@/lib/responsive';
 import {
   getEffectiveSlideTransition,
@@ -538,7 +539,7 @@ const Canvas = () => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (isCanvasPreview) return;
 
-      if (document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement) {
+      if (isEditorTextInputTarget(e.target) || isEditorTextInputTarget(document.activeElement)) {
         return;
       }
 

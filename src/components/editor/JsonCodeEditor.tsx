@@ -1,11 +1,10 @@
-import React, { Suspense, lazy } from 'react';
+import Editor from '@monaco-editor/react';
 import type { OnMount } from '@monaco-editor/react';
+import React from 'react';
 
 import '@/lib/monacoEnv';
 import { useTheme } from '@/context/ThemeContext';
 import { cn } from '@/lib/utils';
-
-const MonacoEditor = lazy(() => import('@monaco-editor/react'));
 
 export type JsonCodeEditorProps = {
   value: string;
@@ -35,39 +34,28 @@ const JsonCodeEditor = ({
         className,
       )}
     >
-      <Suspense
-        fallback={
-          <div
-            className="msp-flex msp-items-center msp-justify-center msp-bg-muted msp-text-xs msp-text-muted-foreground"
-            style={{ height: typeof height === 'number' ? `${height}px` : height }}
-          >
-            …
-          </div>
-        }
-      >
-        <MonacoEditor
-          height={height}
-          language="json"
-          value={value}
-          theme={theme === 'dark' ? 'vs-dark' : 'light'}
-          onChange={onChange ? (next) => onChange(next ?? '') : undefined}
-          onMount={handleMount}
-          options={{
-            readOnly,
-            minimap: { enabled: false },
-            fontSize: 12,
-            lineHeight: 18,
-            scrollBeyondLastLine: false,
-            automaticLayout: true,
-            tabSize: 2,
-            wordWrap: 'on',
-            padding: { top: 8, bottom: 8 },
-            folding: true,
-            formatOnPaste: true,
-            bracketPairColorization: { enabled: true },
-          }}
-        />
-      </Suspense>
+      <Editor
+        height={height}
+        language="json"
+        value={value}
+        theme={theme === 'dark' ? 'vs-dark' : 'light'}
+        onChange={onChange ? (next) => onChange(next ?? '') : undefined}
+        onMount={handleMount}
+        options={{
+          readOnly,
+          minimap: { enabled: false },
+          fontSize: 12,
+          lineHeight: 18,
+          scrollBeyondLastLine: false,
+          automaticLayout: true,
+          tabSize: 2,
+          wordWrap: 'on',
+          padding: { top: 8, bottom: 8 },
+          folding: true,
+          formatOnPaste: true,
+          bracketPairColorization: { enabled: true },
+        }}
+      />
     </div>
   );
 };
