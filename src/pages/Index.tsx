@@ -69,15 +69,15 @@ const Index = () => {
   return (
     <SiteLayout>
       {/* Hero */}
-      <section className={cn(SITE_CONTAINER_CLASS, 'msp-pt-20 msp-pb-16 msp-text-center')}>
+      <section className={cn(SITE_CONTAINER_CLASS, 'msp-pt-12 sm:msp-pt-20 msp-pb-12 sm:msp-pb-16 msp-text-center')}>
         <Badge variant="secondary" className="msp-mb-5 msp-text-xs msp-px-3 msp-py-1">
           {t('home.badge').replace('{version}', APP_VERSION)}
         </Badge>
-        <h1 className="msp-text-5xl sm:msp-text-6xl msp-font-extrabold msp-tracking-tight msp-mb-5 msp-leading-tight">
+        <h1 className="msp-text-4xl sm:msp-text-5xl md:msp-text-6xl msp-font-extrabold msp-tracking-tight msp-mb-5 msp-leading-tight">
           {t('home.hero.title')}{' '}
           <span className="msp-text-primary">{t('home.hero.titleAccent')}</span>
         </h1>
-        <p className="msp-text-muted-foreground msp-text-xl msp-max-w-2xl msp-mx-auto msp-mb-8">
+        <p className="msp-text-muted-foreground msp-text-lg sm:msp-text-xl msp-max-w-2xl msp-mx-auto msp-mb-8 msp-px-1">
           {t('home.hero.subtitle').split('SliderRunner').map((part, index, parts) => (
             <React.Fragment key={`hero-${index}-${part.slice(0, 8)}`}>
               {part}

@@ -21,6 +21,7 @@ export default defineConfig({
                 'src/App.css',
                 'src/pages/**',
                 'src/lib.css',
+                'src/components/ui/drawer.tsx',
             ],
             outDir: 'dist',
             insertTypesEntry: true,

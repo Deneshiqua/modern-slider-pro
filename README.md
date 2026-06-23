@@ -208,6 +208,11 @@ Portals attach to ``document.body`` with high **z-index** values (near **100 0
 
 ## Changelog
 
+### 0.11.0 — 2026-05-19
+- **Improved**: Demo/marketing site — shared header with **npm** and **GitHub** links; mobile hamburger menu, responsive layout on home, demo, docs, and footer.
+- **Improved**: Docs page — horizontal section nav on small screens; tighter mobile padding via shared site container.
+- **Fixed**: Library **TypeScript declaration** build (`pnpm build:lib`) — Trumbowyg jQuery plugin types, `drawer` portable exports, ES2020-safe string sanitization in `TrumbowygTextEditor`.
+
 ### 0.10.0 — 2026-06-24
 - **Added**: **Trumbowyg** rich-text editor for **text** element content in the Properties panel; `SliderRunner` and canvas preview render HTML via `TextElementContent`.
 - **Added**: **Monaco Editor** for JSON **Export** / **Import** dialogs (`JsonCodeEditor`); bundled worker setup via `monacoEnv`.

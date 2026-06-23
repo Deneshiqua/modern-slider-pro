@@ -46,10 +46,10 @@ const DemoPage = () => {
     return (
         <SiteLayout>
             {/* Hero */}
-            <section className={cn(SITE_CONTAINER_CLASS, 'msp-py-16')}>
-                <div className="msp-text-center msp-mb-10">
-                    <h1 className="msp-text-4xl msp-font-bold msp-mb-3">{t('demo.hero.title')}</h1>
-                    <p className="msp-text-muted-foreground msp-text-lg msp-max-w-xl msp-mx-auto">
+            <section className={cn(SITE_CONTAINER_CLASS, 'msp-py-10 sm:msp-py-16')}>
+                <div className="msp-text-center msp-mb-8 sm:msp-mb-10">
+                    <h1 className="msp-text-3xl sm:msp-text-4xl msp-font-bold msp-mb-3">{t('demo.hero.title')}</h1>
+                    <p className="msp-text-muted-foreground msp-text-base sm:msp-text-lg msp-max-w-xl msp-mx-auto msp-px-1">
                         {t('demo.hero.subtitle').split('SliderRunner').map((part, index, parts) => (
                             <React.Fragment key={index}>
                                 {part}
@@ -62,7 +62,7 @@ const DemoPage = () => {
                 </div>
 
                 {/* Controls */}
-                <div className="msp-flex msp-justify-center msp-gap-3 msp-mb-6">
+                <div className="msp-flex msp-flex-wrap msp-justify-center msp-gap-2 sm:msp-gap-3 msp-mb-6">
                     <Button
                         variant={autoPlay ? 'default' : 'outline'}
                         size="sm"
@@ -101,7 +101,7 @@ const DemoPage = () => {
 
                 {/* JSON viewer */}
                 <div className="msp-mt-8 msp-rounded-xl msp-border msp-bg-muted/40 msp-overflow-hidden">
-                    <div className="msp-flex msp-items-center msp-justify-between msp-px-4 msp-py-2.5 msp-border-b msp-bg-muted/60">
+                    <div className="msp-flex msp-flex-wrap msp-items-center msp-justify-between msp-gap-2 msp-px-4 msp-py-2.5 msp-border-b msp-bg-muted/60">
                         <div className="msp-flex msp-items-center msp-gap-2 msp-text-sm msp-font-medium">
                             <Code2 className="msp-h-4 msp-w-4 msp-text-primary" />
                             {t('demo.json.slideTitle').replace(/\{n\}/g, String(activeSlide + 1))}

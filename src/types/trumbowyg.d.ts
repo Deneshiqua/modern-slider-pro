@@ -1,5 +1,3 @@
-import 'jquery';
-
 interface TrumbowygOptions {
   btns?: Array<string | string[]>;
   semantic?: boolean;
@@ -10,10 +8,10 @@ interface TrumbowygOptions {
   tagsToRemove?: string[];
 }
 
-interface JQuery {
-  trumbowyg(method: 'destroy'): JQuery;
+interface JQuery<TElement = HTMLElement> {
+  trumbowyg(method: 'destroy'): this;
   trumbowyg(method: 'html'): string;
-  trumbowyg(method: 'html', html: string): JQuery;
-  trumbowyg(method: 'empty'): JQuery;
-  trumbowyg(options?: TrumbowygOptions): JQuery;
+  trumbowyg(method: 'html', html: string): this;
+  trumbowyg(method: 'empty'): this;
+  trumbowyg(options?: TrumbowygOptions): this;
 }

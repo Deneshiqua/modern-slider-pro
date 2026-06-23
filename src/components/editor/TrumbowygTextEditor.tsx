@@ -27,7 +27,7 @@ export type TrumbowygTextEditorProps = {
 const TrumbowygTextEditor = ({ value, onChange, className }: TrumbowygTextEditorProps) => {
   const { theme } = useTheme();
   const reactId = useId();
-  const editorId = `msp-trumbowyg-${reactId.replaceAll(':', '')}`;
+  const editorId = `msp-trumbowyg-${reactId.replace(/:/g, '')}`;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
@@ -37,7 +37,7 @@ const TrumbowygTextEditor = ({ value, onChange, className }: TrumbowygTextEditor
 
   useLayoutEffect(() => {
     let disposed = false;
-    let $el: ReturnType<typeof import('@/lib/trumbowygEnv').jQuery> | null = null;
+    let $el: JQuery | null = null;
 
     const handleChange = () => {
       if (!$el) return;

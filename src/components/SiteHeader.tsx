@@ -1,7 +1,10 @@
-import { ArrowRight, Moon, Sun } from 'lucide-react';
+import { ArrowRight, Menu, Moon, Sun } from 'lucide-react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
+import SiteSocialLinks from '@/components/SiteSocialLinks';
 import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Switch } from '@/components/ui/switch';
 import { SITE_CONTAINER_CLASS } from '@/components/siteContainer';
 import { useLanguage } from '@/context/LanguageContext';
@@ -14,62 +17,135 @@ const LANGUAGE_OPTIONS: { code: Language; label: string }[] = [
   { code: 'tr', label: 'TR' },
 ];
 
-const SiteHeader = () => {
+type SiteHeaderProps = {
+  onNavigate?: () => void;
+  navClassName?: string;
+  editorButtonClassName?: string;
+};
+
+const SiteNavLinks = ({
+  onNavigate,
+  navClassName,
+  editorButtonClassName,
+}: SiteHeaderProps) => {
+  const { t } = useLanguage();
+
+  return (
+    <nav className={cn('msp-flex msp-items-center msp-gap-2', navClassName)}>
+      <Button variant="ghost" size="sm" asChild className="msp-justify-start">
+        <Link to="/demo" onClick={onNavigate}>
+          {t('site.nav.demo')}
+        </Link>
+      </Button>
+      <Button variant="ghost" size="sm" asChild className="msp-justify-start">
+        <Link to="/docs" onClick={onNavigate}>
+          {t('site.nav.docs')}
+        </Link>
+      </Button>
+      <Button size="sm" asChild className={editorButtonClassName}>
+        <Link to="/editor" onClick={onNavigate}>
+          {t('site.nav.editor')}
+          <ArrowRight className="msp-ml-1 msp-h-4 msp-w-4" />
+        </Link>
+      </Button>
+    </nav>
+  );
+};
+
+const SiteLocaleControls = ({ className }: { className?: string }) => {
   const { language, setLanguage, t } = useLanguage();
   const { theme, toggleTheme } = useTheme();
 
   return (
-    <header className="msp-border-b msp-sticky msp-top-0 msp-z-10 msp-bg-background/80 msp-backdrop-blur">
+    <div className={cn('msp-flex msp-items-center msp-gap-2', className)}>
+      <div className="msp-flex msp-items-center msp-gap-1.5">
+        {LANGUAGE_OPTIONS.map(({ code, label }) => (
+          <Button
+            key={code}
+            type="button"
+            variant={language === code ? 'default' : 'outline'}
+            size="sm"
+            className="msp-h-8 msp-w-9 msp-px-0 msp-text-xs"
+            onClick={() => setLanguage(code)}
+            aria-label={label}
+          >
+            {label}
+          </Button>
+        ))}
+      </div>
+      <div
+        className="msp-flex msp-items-center msp-gap-1.5"
+        title={theme === 'dark' ? t('settings.darkMode') : t('settings.lightMode')}
+      >
+        <Sun className="msp-h-3.5 msp-w-3.5 msp-text-muted-foreground" aria-hidden />
+        <Switch
+          checked={theme === 'dark'}
+          onCheckedChange={toggleTheme}
+          aria-label={t('settings.theme')}
+        />
+        <Moon className="msp-h-3.5 msp-w-3.5 msp-text-muted-foreground" aria-hidden />
+      </div>
+    </div>
+  );
+};
+
+const SiteHeader = () => {
+  const { t } = useLanguage();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const closeMenu = () => setMenuOpen(false);
+
+  return (
+    <header className="msp-border-b msp-sticky msp-top-0 msp-z-10 msp-bg-background/80 msp-backdrop-blur supports-[backdrop-filter]:msp-bg-background/60">
       <div
         className={cn(
           SITE_CONTAINER_CLASS,
-          'msp-h-14 msp-flex msp-items-center msp-justify-between msp-gap-4',
+          'msp-flex msp-min-h-14 msp-items-center msp-justify-between msp-gap-2 msp-py-2 md:msp-py-0',
         )}
       >
-        <Link to="/" className="msp-font-bold msp-text-lg msp-tracking-tight msp-shrink-0">
-          modern-slider-pro
+        <Link
+          to="/"
+          className="msp-min-w-0 msp-font-bold msp-text-base sm:msp-text-lg msp-tracking-tight msp-shrink"
+        >
+          <span className="msp-truncate msp-block">modern-slider-pro</span>
         </Link>
-        <div className="msp-flex msp-items-center msp-gap-2 msp-flex-wrap msp-justify-end">
-          <div className="msp-flex msp-items-center msp-gap-1.5 msp-mr-1">
-            {LANGUAGE_OPTIONS.map(({ code, label }) => (
+
+        {/* Desktop */}
+        <div className="msp-hidden md:msp-flex msp-items-center msp-gap-1 lg:msp-gap-2 msp-min-w-0">
+          <SiteSocialLinks githubLabel={t('site.nav.github')} npmLabel={t('site.nav.npm')} />
+          <SiteLocaleControls className="msp-mx-1" />
+          <SiteNavLinks />
+        </div>
+
+        {/* Mobile */}
+        <div className="msp-flex md:msp-hidden msp-items-center msp-gap-0.5 msp-shrink-0">
+          <SiteSocialLinks githubLabel={t('site.nav.github')} npmLabel={t('site.nav.npm')} />
+          <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
+            <SheetTrigger asChild>
               <Button
-                key={code}
                 type="button"
-                variant={language === code ? 'default' : 'outline'}
-                size="sm"
-                className="msp-h-7 msp-w-9 msp-px-0 msp-text-xs"
-                onClick={() => setLanguage(code)}
-                aria-label={label}
+                variant="ghost"
+                size="icon"
+                className="msp-h-9 msp-w-9"
+                aria-label={t('site.nav.menu')}
               >
-                {label}
+                <Menu className="msp-h-5 msp-w-5" />
               </Button>
-            ))}
-          </div>
-          <div
-            className="msp-flex msp-items-center msp-gap-1.5 msp-mr-2"
-            title={theme === 'dark' ? t('settings.darkMode') : t('settings.lightMode')}
-          >
-            <Sun className="msp-h-3.5 msp-w-3.5 msp-text-muted-foreground" aria-hidden />
-            <Switch
-              checked={theme === 'dark'}
-              onCheckedChange={toggleTheme}
-              aria-label={t('settings.theme')}
-            />
-            <Moon className="msp-h-3.5 msp-w-3.5 msp-text-muted-foreground" aria-hidden />
-          </div>
-          <nav className="msp-flex msp-items-center msp-gap-2">
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/demo">{t('site.nav.demo')}</Link>
-            </Button>
-            <Button variant="ghost" size="sm" asChild>
-              <Link to="/docs">{t('site.nav.docs')}</Link>
-            </Button>
-            <Button size="sm" asChild>
-              <Link to="/editor">
-                {t('site.nav.editor')} <ArrowRight className="msp-ml-1 msp-h-4 msp-w-4" />
-              </Link>
-            </Button>
-          </nav>
+            </SheetTrigger>
+            <SheetContent side="right" className="msp-w-[min(100vw-2rem,20rem)]">
+              <SheetHeader className="msp-text-left">
+                <SheetTitle>{t('site.nav.menu')}</SheetTitle>
+              </SheetHeader>
+              <div className="msp-mt-6 msp-flex msp-flex-col msp-gap-6">
+                <SiteNavLinks
+                  onNavigate={closeMenu}
+                  navClassName="msp-flex-col msp-items-stretch msp-gap-1"
+                  editorButtonClassName="msp-w-full msp-justify-center"
+                />
+                <SiteLocaleControls className="msp-flex-wrap msp-justify-between" />
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </header>

@@ -113,7 +113,20 @@ const NAV = [
 const DocsPage = () => {
     return (
         <SiteLayout>
-            <div className={cn(SITE_CONTAINER_CLASS, 'msp-flex msp-gap-10 msp-py-10')}>
+            <div className={cn(SITE_CONTAINER_CLASS, 'msp-flex msp-flex-col lg:msp-flex-row msp-gap-6 lg:msp-gap-10 msp-py-6 sm:msp-py-10')}>
+                {/* Mobile section nav */}
+                <nav className="lg:msp-hidden msp--mx-1 msp-flex msp-gap-2 msp-overflow-x-auto msp-pb-1 msp-text-sm msp-shrink-0">
+                    {NAV.map((item) => (
+                        <a
+                            key={item.id}
+                            href={`#${item.id}`}
+                            className="msp-shrink-0 msp-rounded-full msp-border msp-bg-muted/40 msp-px-3 msp-py-1 msp-text-muted-foreground hover:msp-text-foreground msp-transition-colors"
+                        >
+                            {item.label}
+                        </a>
+                    ))}
+                </nav>
+
                 {/* Sidebar */}
                 <aside className="msp-hidden lg:msp-block msp-w-52 msp-shrink-0">
                     <nav className="msp-sticky msp-top-24 msp-space-y-1">
