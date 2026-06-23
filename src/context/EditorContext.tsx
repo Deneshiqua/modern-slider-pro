@@ -555,6 +555,8 @@ export const EditorProvider = ({
       isVisible: true,
       isLocked: false,
       content: options?.content || (type === 'text' ? 'New Text' : type === 'button' ? 'Click Me' : type === 'video' ? 'https://www.youtube.com/embed/dQw4w9WgXcQ' : 'https://placehold.co/200x200'),
+      buttonLink: type === 'button' ? '' : undefined,
+      buttonLinkTarget: type === 'button' ? '_blank' : undefined,
       x: 50,
       y: 50,
       style: {
