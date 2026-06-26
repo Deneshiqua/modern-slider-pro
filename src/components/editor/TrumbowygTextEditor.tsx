@@ -18,19 +18,31 @@ const TRUMBOWYG_BUTTONS: Array<string | string[]> = [
   ['removeformat'],
 ];
 
+const MODAL_ACTION_BUTTONS = ['mspSave', 'mspClose'] as const;
+
+export type TrumbowygModalActions = {
+  saveLabel: string;
+  closeLabel: string;
+  onSave: (html: string) => void;
+  onClose: () => void;
+};
+
 export type TrumbowygTextEditorProps = {
   value: string;
   onChange: (html: string) => void;
   className?: string;
+  modalActions?: TrumbowygModalActions;
 };
 
-const TrumbowygTextEditor = ({ value, onChange, className }: TrumbowygTextEditorProps) => {
+const TrumbowygTextEditor = ({ value, onChange, className, modalActions }: TrumbowygTextEditorProps) => {
   const { theme } = useTheme();
   const reactId = useId();
   const editorId = `msp-trumbowyg-${reactId.replace(/:/g, '')}`;
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const modalActionsRef = useRef(modalActions);
+  modalActionsRef.current = modalActions;
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
@@ -64,20 +76,54 @@ const TrumbowygTextEditor = ({ value, onChange, className }: TrumbowygTextEditor
         if (disposed || !textareaRef.current) return;
 
         $el = jQuery(textareaRef.current);
+        const actions = modalActionsRef.current;
+        const btns = actions
+          ? [...TRUMBOWYG_BUTTONS, [...MODAL_ACTION_BUTTONS]]
+          : TRUMBOWYG_BUTTONS;
+
+        const svgPath = actions
+          ? await import('@/lib/trumbowygMspIcons').then((m) => m.getExtendedTrumbowygSvgPath())
+          : trumbowygIcons;
+
         $el.trumbowyg({
-          btns: TRUMBOWYG_BUTTONS,
+          btns,
+          btnsDef: actions
+            ? {
+                mspSave: {
+                  ico: 'msp-save',
+                  title: actions.saveLabel,
+                  class: 'trumbowyg-not-disable msp-trumbowyg-action-save',
+                  fn: function mspSave() {
+                    flushPending();
+                    const html = $el?.trumbowyg('html') ?? '';
+                    modalActionsRef.current?.onSave(html);
+                  },
+                },
+                mspClose: {
+                  ico: 'close',
+                  title: actions.closeLabel,
+                  class: 'trumbowyg-not-disable msp-trumbowyg-action-close',
+                  fn: function mspClose() {
+                    modalActionsRef.current?.onClose();
+                  },
+                },
+              }
+            : undefined,
           semantic: false,
           autogrow: true,
           resetCss: false,
           removeformatPasted: true,
-          svgPath: trumbowygIcons,
+          svgPath,
         });
 
         $el.trumbowyg('html', value);
         $el.on('tbwchange', handleChange);
         $el.on('tbwblur', flushPending);
-        setReady(true);
-        setLoadError(null);
+        $el.on('tbwinit', () => {
+          if (disposed) return;
+          setReady(true);
+          setLoadError(null);
+        });
       } catch (error) {
         if (!disposed) {
           setLoadError(error instanceof Error ? error.message : 'Trumbowyg yüklenemedi');
@@ -97,6 +143,7 @@ const TrumbowygTextEditor = ({ value, onChange, className }: TrumbowygTextEditor
         flushPending();
         $el.off('tbwchange', handleChange);
         $el.off('tbwblur', flushPending);
+        $el.off('tbwinit');
         $el.trumbowyg('destroy');
         $el = null;
       }
@@ -106,10 +153,14 @@ const TrumbowygTextEditor = ({ value, onChange, className }: TrumbowygTextEditor
     // eslint-disable-next-line react-hooks/exhaustive-deps -- initial value only
   }, [editorId]);
 
+  const isModal = className?.includes('msp-trumbowyg-modal');
+
   return (
     <div
       className={cn(
-        'msp-trumbowyg-wrap msp-min-h-[180px] msp-overflow-visible msp-rounded-md msp-border msp-border-border',
+        'msp-trumbowyg-wrap msp-overflow-visible msp-rounded-md msp-border msp-border-border',
+        !isModal && 'msp-min-h-[180px]',
+        ready && 'msp-trumbowyg-ready',
         theme === 'dark' ? 'trumbowyg-dark msp-dark dark' : 'msp-light',
         className,
       )}
@@ -118,7 +169,12 @@ const TrumbowygTextEditor = ({ value, onChange, className }: TrumbowygTextEditor
         <p className="msp-p-3 msp-text-xs msp-text-destructive">{loadError}</p>
       ) : null}
       {!ready && !loadError ? (
-        <div className="msp-flex msp-min-h-[160px] msp-items-center msp-justify-center msp-text-xs msp-text-muted-foreground">
+        <div
+          className={cn(
+            'msp-flex msp-items-center msp-justify-center msp-text-xs msp-text-muted-foreground',
+            isModal ? 'msp-min-h-[300px]' : 'msp-min-h-[160px]',
+          )}
+        >
           …
         </div>
       ) : null}
@@ -126,8 +182,8 @@ const TrumbowygTextEditor = ({ value, onChange, className }: TrumbowygTextEditor
         ref={textareaRef}
         id={editorId}
         defaultValue={value}
-        className={cn(ready ? 'msp-sr-only' : 'msp-hidden')}
-        tabIndex={ready ? -1 : 0}
+        className="msp-hidden"
+        tabIndex={-1}
         aria-label="Text content editor"
       />
     </div>

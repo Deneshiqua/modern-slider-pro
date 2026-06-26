@@ -1,5 +1,19 @@
 interface TrumbowygOptions {
   btns?: Array<string | string[]>;
+  btnsDef?: Record<
+    string,
+    {
+      fn?: (() => void) | string;
+      text?: string;
+      title?: string;
+      hasIcon?: boolean;
+      class?: string;
+      param?: string;
+      forceCss?: boolean;
+      dropdown?: string[];
+      ico?: string;
+    }
+  >;
   semantic?: boolean;
   autogrow?: boolean;
   resetCss?: boolean;

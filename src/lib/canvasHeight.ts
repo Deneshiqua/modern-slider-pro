@@ -15,6 +15,15 @@ export function getCanvasHeightMode(canvasSettings?: CanvasSettings | null): Can
   return normalizeCanvasHeightMode(canvasSettings?.canvasHeightMode);
 }
 
+/** SliderRunner outer container background (not the slide itself). */
+export function getRunnerBackgroundColor(canvasSettings?: CanvasSettings | null): string {
+  const raw = canvasSettings?.runnerBackgroundColor?.trim();
+  if (!raw || raw.toLowerCase() === 'transparent') {
+    return 'transparent';
+  }
+  return raw;
+}
+
 /** Visible height when a wide image is contained at `containerWidth`, capped at `maxHeight`. */
 export function getFitBackgroundHeight(
   containerWidth: number,

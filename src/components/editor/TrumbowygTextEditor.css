@@ -5,6 +5,10 @@
   background: hsl(var(--card)) !important;
 }
 
+.msp-trumbowyg-wrap:not(.msp-trumbowyg-ready) .trumbowyg-box {
+  display: none !important;
+}
+
 .msp-trumbowyg-wrap .trumbowyg-editor-box {
   border-color: hsl(var(--border)) !important;
   background: hsl(var(--background)) !important;
@@ -17,6 +21,77 @@
   line-height: 1.5;
   background: hsl(var(--background)) !important;
   color: hsl(var(--foreground)) !important;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-textarea,
+.msp-trumbowyg-wrap > textarea {
+  background: hsl(var(--background)) !important;
+  color: hsl(var(--foreground)) !important;
+  border-color: hsl(var(--border)) !important;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 12px 14px;
+  display: none !important;
+}
+
+/* HTML modu — yalnizca textarea */
+.msp-trumbowyg-wrap .trumbowyg-box.trumbowyg-editor-hidden .trumbowyg-textarea {
+  display: block !important;
+  position: relative !important;
+  width: 100% !important;
+  height: auto !important;
+  min-height: 120px;
+  opacity: 1 !important;
+  overflow: auto !important;
+  flex: 1 1 auto;
+  pointer-events: auto !important;
+}
+
+.msp-trumbowyg-wrap.msp-trumbowyg-modal .trumbowyg-box.trumbowyg-editor-hidden .trumbowyg-textarea {
+  min-height: 300px;
+  max-height: min(52vh, 480px);
+}
+
+/* WYSIWYG modu — yalnizca editor */
+.msp-trumbowyg-wrap .trumbowyg-box.trumbowyg-editor-visible .trumbowyg-editor-box {
+  display: block !important;
+  flex: 1 1 auto;
+}
+
+.msp-trumbowyg-wrap .trumbowyg-box.trumbowyg-editor-hidden .trumbowyg-editor-box {
+  display: none !important;
+}
+
+.msp-trumbowyg-wrap.msp-trumbowyg-modal {
+  min-height: 0;
+}
+
+.msp-trumbowyg-wrap.msp-trumbowyg-modal .trumbowyg-box {
+  min-height: 0;
+  margin-bottom: 0;
+}
+
+.msp-trumbowyg-wrap.msp-trumbowyg-modal .trumbowyg-editor-box {
+  min-height: 0;
+}
+
+.msp-trumbowyg-wrap.msp-trumbowyg-modal .trumbowyg-editor {
+  min-height: 300px;
+  max-height: min(52vh, 480px);
+  overflow-y: auto;
+}
+
+.msp-trumbowyg-wrap.msp-trumbowyg-modal .trumbowyg-button-group:has(.msp-trumbowyg-action-save) {
+  margin-left: auto;
+}
+
+.msp-trumbowyg-wrap.msp-trumbowyg-modal .msp-trumbowyg-action-save svg {
+  fill: hsl(var(--primary)) !important;
+}
+
+.msp-trumbowyg-wrap.msp-trumbowyg-modal .msp-trumbowyg-action-close svg {
+  fill: hsl(var(--muted-foreground)) !important;
 }
 
 .msp-trumbowyg-wrap .trumbowyg-editor-box[contenteditable='true']:empty:not(:focus)::before {

@@ -156,6 +156,8 @@ export interface CanvasSettings {
    * - fitBackground: when slide background uses contain, height follows image aspect ratio up to `canvasHeight`
    */
   canvasHeightMode?: CanvasHeightMode;
+  /** Outer SliderRunner container fill (letterbox / embed chrome). Default `transparent`. */
+  runnerBackgroundColor?: string;
 }
 
 export interface EditorState {

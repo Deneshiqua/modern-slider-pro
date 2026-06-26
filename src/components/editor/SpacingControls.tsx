@@ -1,4 +1,5 @@
 import { Button } from '@/components/ui/button';
+import PropertyField from '@/components/editor/PropertyField';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Slider } from '@/components/ui/slider';
@@ -351,10 +352,9 @@ const SpacingControls = ({ elementId, editableElement, propertyMode }: SpacingCo
     stepVal: number,
     updateSide: (i: 0 | 1 | 2 | 3, v: number) => void,
   ) => (
-    <div className="msp-grid msp-grid-cols-2 msp-gap-x-3 msp-gap-y-4">
+    <div className="msp-grid msp-grid-cols-1 msp-gap-y-3">
       {SIDE_ORDER.map(i => (
-        <div key={`${prefix}-${i}`} className="msp-space-y-1 msp-min-w-0">
-          <Label className="msp-text-[11px]">{t(SIDE_LABEL_KEYS[i])}</Label>
+        <PropertyField key={`${prefix}-${i}`} label={t(SIDE_LABEL_KEYS[i])} labelClassName="msp-text-[11px]">
           <div className="msp-flex msp-items-center msp-gap-2">
             <Slider
               className="msp-flex-1"
@@ -373,7 +373,7 @@ const SpacingControls = ({ elementId, editableElement, propertyMode }: SpacingCo
               onChange={e => updateSide(i, Number.parseFloat(e.target.value))}
             />
           </div>
-        </div>
+        </PropertyField>
       ))}
     </div>
   );

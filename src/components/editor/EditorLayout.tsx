@@ -11,6 +11,7 @@ import { SnapGuidesProvider } from '@/context/SnapGuidesContext';
 import { Language } from '@/lib/translations';
 import { LanguageProvider, TranslationDictionary, useLanguage, type TranslationKey } from '@/context/LanguageContext';
 import PropertiesPanel from './PropertiesPanel';
+import GoogleFontsLoader from './GoogleFontsLoader';
 import { PublishedSlidesProvider } from '@/context/PublishedSlidesContext';
 import Sidebar from './Sidebar';
 import { Theme, ThemeProvider, useTheme } from '@/context/ThemeContext';
@@ -18,7 +19,7 @@ import Toolbar from './Toolbar';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useDirtyReloadGuard } from '@/hooks/useDirtyReloadGuard';
 import { MediaPickerProvider } from '@/context/MediaPickerContext';
-import { isEditorTextInputTarget } from '@/lib/editorKeyboardTarget';
+import { isEditorTextInputTarget, hasActiveTextSelection } from '@/lib/editorKeyboardTarget';
 import { CanvasSettings, Slide, SliderEditorSavePayload, SliderSettings } from '@/types/editor';
 import type { MediaPickerHandler } from '@/types/mediaPicker';
 import { cn } from '@/lib/utils';
@@ -122,6 +123,7 @@ const EditorShell = ({
     selectAllRootElements,
     selectedElementId,
     selectedElementIds,
+    slides,
   } = useEditor();
 
   const showTimeline = canvasSettings.showTimeline !== false;
@@ -131,6 +133,12 @@ const EditorShell = ({
     layerPanelTab !== 'canvas-settings' &&
     layerPanelTab !== 'slider-settings' &&
     (layerPanelTab !== 'layers' || hasLayerSelection);
+
+  React.useEffect(() => {
+    if (hasLayerSelection) {
+      setLayerPanelTab('layers');
+    }
+  }, [hasLayerSelection, selectedElementId, selectedElementIds]);
 
   useDirtyReloadGuard(isDirty, t);
 
@@ -149,6 +157,10 @@ const EditorShell = ({
       const wantsCut = usesModifier && key === 'x' && !event.shiftKey;
       const wantsPaste = usesModifier && key === 'v' && !event.shiftKey;
       const wantsSelectAll = usesModifier && key === 'a' && !event.shiftKey;
+
+      if ((wantsCopy || wantsCut) && hasActiveTextSelection()) {
+        return;
+      }
 
       if (wantsSelectAll) {
         event.preventDefault();
@@ -217,6 +229,7 @@ const EditorShell = ({
       )}
     >
       {showToaster && <Toaster theme={theme} />}
+      <GoogleFontsLoader slides={slides} />
       <Toolbar onDemoSave={onDemoSave} onSave={onSave} saveButtonLabel={saveButtonLabel} />
       <div className="msp-flex msp-flex-1 msp-min-h-0 msp-min-w-0 msp-overflow-hidden">
         <Sidebar />

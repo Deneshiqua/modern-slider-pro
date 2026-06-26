@@ -31,8 +31,7 @@ function layerListSignature(elements: EditorElement[]): string {
       const vis = e.isVisible === false ? '0' : '1';
       const lock = e.isLocked ? '1' : '0';
       const kids = e.children?.length ? String(e.children.length) : '0';
-      const c = (e.content ?? '').slice(0, 64);
-      return `${e.id}:${e.type}:${z}:${vis}:${lock}:${kids}:${e.name ?? ''}:${c}`;
+      return `${e.id}:${e.type}:${z}:${vis}:${lock}:${kids}:${e.name ?? ''}`;
     })
     .join('\u001e');
 }
@@ -109,9 +108,6 @@ const LayerItem = ({ element, isSelected, selectionCount, selectElement, toggleE
       <div className="msp-flex-1 msp-min-w-0">
         <span className="msp-block msp-truncate msp-text-xs msp-font-semibold" title={displayName}>
           {displayName}
-        </span>
-        <span className="msp-block msp-truncate msp-text-muted-foreground msp-font-normal msp-text-xs" title={element.content}>
-          {element.content || '\u00A0'}
         </span>
       </div>
 

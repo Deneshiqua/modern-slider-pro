@@ -1,4 +1,4 @@
-import { ANIMATION_PRESETS, FONT_SIZES } from '@/lib/constants';
+import { ANIMATION_PRESETS } from '@/lib/constants';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { AlignCenter, AlignLeft, AlignRight, ArrowDown, ArrowUp, BringToFront, Image as ImageIcon, Palette, SendToBack, Type, Video } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
@@ -18,7 +18,7 @@ import { getElementPropertiesForMode } from '@/lib/responsive';
 import { useEditor } from '@/context/EditorContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { SettingsPanelDivider } from '@/components/editor/SettingsPanelDivider';
-import { SLIDE_BACKGROUND_FIT_OPTIONS, getSlideBackgroundFit } from '@/lib/slideBackground';
+import { SLIDE_BACKGROUND_FIT_OPTIONS, getSlideBackgroundColor, getSlideBackgroundFit } from '@/lib/slideBackground';
 import { getSlideOverlayOpacity } from '@/lib/slideOverlay';
 import { EditorElement, ResponsivePropertyMode, type SlideBackgroundFit } from '@/types/editor';
 import AlignmentControls from './AlignmentControls';
@@ -27,7 +27,9 @@ import { MultiSelectionAlignmentControls } from './MultiSelectionAlignmentContro
 import { RowAlignmentControls } from './RowAlignmentControls';
 import { ColumnAlignmentControls } from './ColumnAlignmentControls';
 import SpacingControls from './SpacingControls';
-import TrumbowygTextEditor from './TrumbowygTextEditor';
+import TextContentEditorModal from './TextContentEditorModal';
+import FontPropertiesControls from './FontPropertiesControls';
+import PropertyField from './PropertyField';
 import { pruneMultiSelectionIds } from '@/lib/alignment';
 
 const PropertiesPanel = () => {
@@ -56,12 +58,12 @@ const PropertiesPanel = () => {
   // State to persist accordion open/close status
   const [openAccordionItems, setOpenAccordionItems] = useState<string[]>(() => {
     if (typeof window === 'undefined') {
-      return ['content', 'color', 'style', 'animation', 'spacing'];
+      return ['content', 'color', 'font', 'style', 'animation', 'spacing'];
     }
 
     try {
       const raw = window.localStorage.getItem(PROPERTIES_ACCORDION_STORAGE_KEY);
-      if (!raw) return ['content', 'color', 'style', 'animation', 'spacing'];
+      if (!raw) return ['content', 'color', 'font', 'style', 'animation', 'spacing'];
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed) && parsed.every((item) => typeof item === 'string')) {
         return parsed;
@@ -70,12 +72,11 @@ const PropertiesPanel = () => {
       // Ignore invalid persisted value and fallback to defaults.
     }
 
-    return ['content', 'color', 'style', 'animation', 'spacing'];
+    return ['content', 'color', 'font', 'style', 'animation', 'spacing'];
   });
   const currentSlide = slides[currentSlideIndex];
   const backgroundFitSelect = (
-    <div className="msp-space-y-1.5">
-      <Label className="msp-text-xs">{t('editor.properties.backgroundFit')}</Label>
+    <PropertyField label={t('editor.properties.backgroundFit')}>
       <Select
         value={getSlideBackgroundFit(currentSlide)}
         onValueChange={(value) => updateSlideBackgroundFit(value as SlideBackgroundFit)}
@@ -91,7 +92,7 @@ const PropertiesPanel = () => {
           ))}
         </SelectContent>
       </Select>
-    </div>
+    </PropertyField>
   );
   const selectedElement = currentSlide.elements.find(e => e.id === selectedElementId);
 
@@ -184,8 +185,9 @@ const PropertiesPanel = () => {
                   defaultValue={currentSlide.backgroundType || 'color'}
                   onValueChange={(val) => {
                     let value = '';
-                    if (val === 'color') value = currentSlide.background || '#ffffff';
-                    else if (val === 'image') value = currentSlide.backgroundImage || '';
+                    if (val === 'color') {
+                      value = getSlideBackgroundColor(currentSlide);
+                    } else if (val === 'image') value = currentSlide.backgroundImage || '';
                     else if (val === 'video') value = currentSlide.backgroundVideo || '';
 
                     updateSlideBackground(value, val as 'color' | 'image' | 'video');
@@ -201,19 +203,26 @@ const PropertiesPanel = () => {
                   <TabsContent value="color" className="msp-space-y-2 msp-mt-2">
                     <ColorPicker
                       label={t('editor.properties.backgroundColor')}
-                      value={currentSlide.background || ''}
-                      onChange={(color) => updateSlideBackground(color || '#ffffff', 'color')}
+                      value={
+                        getSlideBackgroundColor(currentSlide) === 'transparent'
+                          ? ''
+                          : getSlideBackgroundColor(currentSlide)
+                      }
+                      onChange={(color) =>
+                        updateSlideBackground(color.trim() ? color : 'transparent', 'color')
+                      }
                     />
                   </TabsContent>
 
                   <TabsContent value="image" className="msp-space-y-2 msp-mt-2">
-                    <Label className="msp-text-xs">{t('editor.properties.backgroundImage')}</Label>
-                    <Input
-                      className="msp-h-7 msp-text-xs"
-                      value={currentSlide.backgroundImage || ''}
-                      onChange={(e) => updateSlideBackground(e.target.value, 'image')}
-                      placeholder="/images/photo.jpg"
-                    />
+                    <PropertyField label={t('editor.properties.backgroundImage')}>
+                      <Input
+                        className="msp-h-7 msp-text-xs"
+                        value={currentSlide.backgroundImage || ''}
+                        onChange={(e) => updateSlideBackground(e.target.value, 'image')}
+                        placeholder="/images/photo.jpg"
+                      />
+                    </PropertyField>
                     <Button
                       variant="outline"
                       size="sm"
@@ -233,13 +242,14 @@ const PropertiesPanel = () => {
                   </TabsContent>
 
                   <TabsContent value="video" className="msp-space-y-2 msp-mt-2">
-                    <Label className="msp-text-xs">{t('editor.properties.backgroundVideo')}</Label>
-                    <Input
-                      className="msp-h-7 msp-text-xs"
-                      value={currentSlide.backgroundVideo || ''}
-                      onChange={(e) => updateSlideBackground(e.target.value, 'video')}
-                      placeholder="https://www.youtube.com/watch?v=..."
-                    />
+                    <PropertyField label={t('editor.properties.backgroundVideo')}>
+                      <Input
+                        className="msp-h-7 msp-text-xs"
+                        value={currentSlide.backgroundVideo || ''}
+                        onChange={(e) => updateSlideBackground(e.target.value, 'video')}
+                        placeholder="https://www.youtube.com/watch?v=..."
+                      />
+                    </PropertyField>
                     <p className="msp-text-xs msp-text-muted-foreground">{t('editor.properties.videoDesc')}</p>
                     {backgroundFitSelect}
                   </TabsContent>
@@ -268,9 +278,8 @@ const PropertiesPanel = () => {
                         value={currentSlide.overlayColor || '#000000'}
                         onChange={(overlayColor) => updateSlideOverlay({ overlayColor })}
                       />
-                      <div className="msp-space-y-1.5">
-                        <Label className="msp-text-xs">{t('editor.properties.overlayOpacity')}</Label>
-                        <div className="msp-flex msp-items-center msp-gap-3">
+                      <PropertyField label={t('editor.properties.overlayOpacity')}>
+                        <div className="msp-flex msp-items-center msp-gap-2">
                           <Slider
                             value={[Math.round(getSlideOverlayOpacity(currentSlide) * 100)]}
                             min={0}
@@ -281,11 +290,11 @@ const PropertiesPanel = () => {
                             }
                             className="msp-flex-1"
                           />
-                          <span className="msp-w-10 msp-text-right msp-text-xs msp-tabular-nums">
+                          <span className="msp-w-10 msp-text-right msp-text-xs msp-tabular-nums msp-shrink-0">
                             {Math.round(getSlideOverlayOpacity(currentSlide) * 100)}%
                           </span>
                         </div>
-                      </div>
+                      </PropertyField>
                     </>
                   )}
                 </div>
@@ -306,7 +315,7 @@ const PropertiesPanel = () => {
   };
 
   const accordionTriggerClass =
-    'msp-min-h-11 msp-px-4 msp-py-3 msp-text-xs msp-font-medium msp-text-foreground msp-transition-colors hover:msp-no-underline hover:msp-bg-muted/55 data-[state=closed]:msp-bg-muted/15 data-[state=open]:msp-bg-muted/40 data-[state=open]:msp-border-b msp-border-border';
+    'msp-min-h-8 msp-px-3 msp-py-2 msp-text-[12px] msp-font-medium msp-leading-tight msp-text-foreground msp-transition-colors hover:msp-no-underline hover:msp-bg-muted/55 data-[state=closed]:msp-bg-muted/15 data-[state=open]:msp-bg-muted/40 data-[state=open]:msp-border-b msp-border-border';
   const accordionBodyClass = 'msp-px-3 msp-pt-3 msp-pb-4 msp-bg-muted/20';
 
   const resolvedTextAlign =
@@ -345,11 +354,10 @@ const PropertiesPanel = () => {
             <AccordionItem value="content">
               <AccordionTrigger className={accordionTriggerClass}>{t('editor.properties.content')}</AccordionTrigger>
               <AccordionContent className={`${accordionBodyClass} msp-space-y-3`}>
-                <div className="msp-space-y-1">
-                  <Label className="msp-text-xs">{t('editor.properties.content')}</Label>
+                <PropertyField label={t('editor.properties.content')} stacked>
                   {activeElement.type === 'text' ? (
-                    <TrumbowygTextEditor
-                      key={activeElement.id}
+                    <TextContentEditorModal
+                      elementId={activeElement.id}
                       value={activeElement.content}
                       onChange={(html) => updateElement(activeElement.id, { content: html })}
                     />
@@ -382,7 +390,7 @@ const PropertiesPanel = () => {
                       {t('mediaManager.upload')}
                     </Button>
                   ) : null}
-                </div>
+                </PropertyField>
               </AccordionContent>
             </AccordionItem>
 
@@ -392,8 +400,7 @@ const PropertiesPanel = () => {
               </AccordionTrigger>
               <AccordionContent className={`${accordionBodyClass} msp-space-y-3`}>
                 {activeElement.type === 'text' || activeElement.type === 'button' ? (
-                  <div className="msp-space-y-1">
-                    <Label className="msp-text-xs">{t('editor.properties.textAlign')}</Label>
+                  <PropertyField label={t('editor.properties.textAlign')}>
                     <ToggleGroup
                       type="single"
                       variant="outline"
@@ -429,7 +436,7 @@ const PropertiesPanel = () => {
                         <AlignRight className="msp-h-3.5 msp-w-3.5" strokeWidth={1.75} />
                       </ToggleGroupItem>
                     </ToggleGroup>
-                  </div>
+                  </PropertyField>
                 ) : null}
                 <ColumnAlignmentControls propertyMode={propertyMode} />
                 <RowAlignmentControls propertyMode={propertyMode} />
@@ -443,8 +450,7 @@ const PropertiesPanel = () => {
                   {t('editor.properties.buttonLinkSettings')}
                 </AccordionTrigger>
                 <AccordionContent className={`${accordionBodyClass} msp-space-y-3`}>
-                  <div className="msp-space-y-1">
-                    <Label className="msp-text-xs">{t('editor.properties.buttonLink')}</Label>
+                  <PropertyField label={t('editor.properties.buttonLink')}>
                     <Input
                       className="msp-h-7 msp-text-xs"
                       value={activeElement.buttonLink || ''}
@@ -455,10 +461,9 @@ const PropertiesPanel = () => {
                         })
                       }
                     />
-                  </div>
+                  </PropertyField>
 
-                  <div className="msp-space-y-1">
-                    <Label className="msp-text-xs">{t('editor.properties.buttonLinkTarget')}</Label>
+                  <PropertyField label={t('editor.properties.buttonLinkTarget')}>
                     <Select
                       value={activeElement.buttonLinkTarget || '_blank'}
                       onValueChange={(value) =>
@@ -475,7 +480,7 @@ const PropertiesPanel = () => {
                         <SelectItem value="_blank">{t('editor.properties.buttonLinkTargetBlank')}</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
+                  </PropertyField>
                 </AccordionContent>
               </AccordionItem>
             ) : null}
@@ -493,14 +498,38 @@ const PropertiesPanel = () => {
               </AccordionContent>
             </AccordionItem>
 
+            {activeElement.type === 'text' || activeElement.type === 'button' ? (
+              <AccordionItem value="font">
+                <AccordionTrigger className={accordionTriggerClass}>
+                  {t('editor.properties.fontTitle')}
+                </AccordionTrigger>
+                <AccordionContent className={accordionBodyClass}>
+                  {editableElement ? (
+                    <FontPropertiesControls
+                      fontFamily={
+                        typeof editableElement.style.fontFamily === 'string'
+                          ? editableElement.style.fontFamily
+                          : undefined
+                      }
+                      fontSize={editableElement.style.fontSize}
+                      fontWeight={editableElement.style.fontWeight}
+                      onFontFamilyChange={(family) => handleResponsiveStyleChange('fontFamily', family)}
+                      onFontSizeChange={(size) => handleResponsiveStyleChange('fontSize', size)}
+                      onFontWeightChange={(weight) => handleResponsiveStyleChange('fontWeight', weight)}
+                    />
+                  ) : null}
+                </AccordionContent>
+              </AccordionItem>
+            ) : null}
+
             {/* Style */}
             <AccordionItem value="style">
               <AccordionTrigger className={accordionTriggerClass}>{t('editor.properties.style')}</AccordionTrigger>
               <AccordionContent className={`${accordionBodyClass} msp-space-y-3`}>
                 {/* Layer Management */}
                 <div className="msp-space-y-1.5 msp-pb-3 msp-border-b">
-                  <Label className="msp-text-xs">{t('editor.properties.layerOrder')}</Label>
-                  <div className="msp-flex msp-gap-1.5">
+                  <PropertyField label={t('editor.properties.layerOrder')}>
+                    <div className="msp-flex msp-gap-1 msp-justify-end">
                     <Button variant="outline" size="icon" className="msp-h-7 msp-w-7" onClick={() => bringToFront(activeElement.id)} title={t('editor.contextMenu.bringToFront')}>
                       <BringToFront className="msp-h-3 msp-w-3" />
                     </Button>
@@ -513,55 +542,49 @@ const PropertiesPanel = () => {
                     <Button variant="outline" size="icon" className="msp-h-7 msp-w-7" onClick={() => sendToBack(activeElement.id)} title={t('editor.contextMenu.sendToBack')}>
                       <SendToBack className="msp-h-3 msp-w-3" />
                     </Button>
-                  </div>
+                    </div>
+                  </PropertyField>
                 </div>
 
-                <div className="msp-grid msp-grid-cols-2 msp-gap-3">
-                  <div className="msp-space-y-1">
-                    <Label className="msp-text-xs">X {t('editor.properties.position')}</Label>
-                    <Input
-                      className="msp-h-7 msp-text-xs"
-                      type="number"
-                      value={editableElement?.x ?? activeElement.x}
-                      onChange={(e) => updateElementForMode(activeElement.id, { x: Number(e.target.value) }, propertyMode)}
-                    />
-                  </div>
-                  <div className="msp-space-y-1">
-                    <Label className="msp-text-xs">Y {t('editor.properties.position')}</Label>
-                    <Input
-                      className="msp-h-7 msp-text-xs"
-                      type="number"
-                      value={editableElement?.y ?? activeElement.y}
-                      onChange={(e) => updateElementForMode(activeElement.id, { y: Number(e.target.value) }, propertyMode)}
-                    />
-                  </div>
-                </div>
+                <PropertyField label={`X ${t('editor.properties.position')}`}>
+                  <Input
+                    className="msp-h-7 msp-text-xs"
+                    type="number"
+                    value={editableElement?.x ?? activeElement.x}
+                    onChange={(e) => updateElementForMode(activeElement.id, { x: Number(e.target.value) }, propertyMode)}
+                  />
+                </PropertyField>
 
-                <div className="msp-grid msp-grid-cols-2 msp-gap-3">
-                  <div className="msp-space-y-1">
-                    <Label className="msp-text-xs">{t('editor.properties.size')} (W)</Label>
-                    <Input
-                      className="msp-h-7 msp-text-xs"
-                      type="number"
-                      value={editableElement?.style.width || ''}
-                      onChange={(e) => handleResponsiveStyleChange('width', Number(e.target.value))}
-                      placeholder="Auto"
-                    />
-                  </div>
-                  <div className="msp-space-y-1">
-                    <Label className="msp-text-xs">{t('editor.properties.size')} (H)</Label>
-                    <Input
-                      className="msp-h-7 msp-text-xs"
-                      type="number"
-                      value={editableElement?.style.height || ''}
-                      onChange={(e) => handleResponsiveStyleChange('height', Number(e.target.value))}
-                      placeholder="Auto"
-                    />
-                  </div>
-                </div>
+                <PropertyField label={`Y ${t('editor.properties.position')}`}>
+                  <Input
+                    className="msp-h-7 msp-text-xs"
+                    type="number"
+                    value={editableElement?.y ?? activeElement.y}
+                    onChange={(e) => updateElementForMode(activeElement.id, { y: Number(e.target.value) }, propertyMode)}
+                  />
+                </PropertyField>
 
-                <div className="msp-space-y-1">
-                  <Label className="msp-text-xs">Döndürme (°)</Label>
+                <PropertyField label={`${t('editor.properties.size')} (W)`}>
+                  <Input
+                    className="msp-h-7 msp-text-xs"
+                    type="number"
+                    value={editableElement?.style.width || ''}
+                    onChange={(e) => handleResponsiveStyleChange('width', Number(e.target.value))}
+                    placeholder="Auto"
+                  />
+                </PropertyField>
+
+                <PropertyField label={`${t('editor.properties.size')} (H)`}>
+                  <Input
+                    className="msp-h-7 msp-text-xs"
+                    type="number"
+                    value={editableElement?.style.height || ''}
+                    onChange={(e) => handleResponsiveStyleChange('height', Number(e.target.value))}
+                    placeholder="Auto"
+                  />
+                </PropertyField>
+
+                <PropertyField label="Döndürme (°)">
                   <Input
                     className="msp-h-7 msp-text-xs"
                     type="number"
@@ -570,12 +593,10 @@ const PropertiesPanel = () => {
                     value={editableElement?.rotation ?? 0}
                     onChange={(e) => updateElementForMode(activeElement.id, { rotation: ((Number(e.target.value) % 360) + 360) % 360 }, propertyMode)}
                   />
-                </div>
+                </PropertyField>
 
-                {/* Object Fit Control for Images */}
                 {activeElement.type === 'image' && (
-                  <div className="msp-space-y-1">
-                    <Label className="msp-text-xs">{t('editor.properties.imageFit')}</Label>
+                  <PropertyField label={t('editor.properties.imageFit')}>
                     <Select
                       value={editableElement?.style.objectFit || 'cover'}
                       onValueChange={(val) => handleResponsiveStyleChange('objectFit', val)}
@@ -590,35 +611,18 @@ const PropertiesPanel = () => {
                         <SelectItem value="none">{t('editor.properties.fitNone')}</SelectItem>
                       </SelectContent>
                     </Select>
-                  </div>
+                  </PropertyField>
                 )}
 
-                <div className="msp-space-y-1">
-                  <Label className="msp-text-xs">{t('editor.properties.opacity')} ({activeElementOpacity})</Label>
+                <PropertyField label={`${t('editor.properties.opacity')} (${activeElementOpacity})`}>
                   <Slider
                     value={[activeElementOpacity]}
                     max={1}
                     step={0.1}
                     onValueChange={([val]) => handleResponsiveStyleChange('opacity', val)}
                   />
-                </div>
+                </PropertyField>
 
-                <div className="msp-space-y-1">
-                  <Label className="msp-text-xs">{t('editor.properties.fontSize')}</Label>
-                  <Select
-                    value={String(editableElement?.style.fontSize || 16)}
-                    onValueChange={(val) => handleResponsiveStyleChange('fontSize', Number(val))}
-                  >
-                    <SelectTrigger className="msp-h-7 msp-text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {FONT_SIZES.map(size => (
-                        <SelectItem key={size} value={String(size)} className="msp-text-xs">{size}px</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
               </AccordionContent>
             </AccordionItem>
 
@@ -626,8 +630,7 @@ const PropertiesPanel = () => {
             <AccordionItem value="animation">
               <AccordionTrigger className={accordionTriggerClass}>{t('editor.properties.animation')}</AccordionTrigger>
               <AccordionContent className={`${accordionBodyClass} msp-space-y-3`}>
-                <div className="msp-space-y-1">
-                  <Label className="msp-text-xs">{t('editor.properties.entranceAnimation')}</Label>
+                <PropertyField label={t('editor.properties.entranceAnimation')}>
                   <Select
                     value={activeElement.animation?.name || 'None'}
                     onValueChange={(name) => {
@@ -652,7 +655,7 @@ const PropertiesPanel = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </PropertyField>
 
                 {activeElement.animation && activeElement.animation.name !== 'None' && (
                   <div className="msp-p-2 msp-bg-secondary/50 msp-rounded-md msp-text-xs">

@@ -20,6 +20,14 @@ export function getSlideBackgroundFit(slide: Pick<Slide, 'backgroundFit'>): Slid
   return normalizeSlideBackgroundFit(slide.backgroundFit);
 }
 
+/** Resolved slide fill when backgroundType is `color` (empty / transparent = no fill). */
+export function getSlideBackgroundColor(slide: Pick<Slide, 'backgroundType' | 'backgroundColor' | 'background'>): string {
+  if (slide.backgroundType !== 'color') return 'transparent';
+  const raw = (slide.backgroundColor || slide.background || '').trim();
+  if (!raw || raw.toLowerCase() === 'transparent') return 'transparent';
+  return raw;
+}
+
 export function getSlideImageBackgroundCss(
   fit: SlideBackgroundFit,
 ): Pick<CSSProperties, 'backgroundSize' | 'backgroundPosition' | 'backgroundRepeat'> {

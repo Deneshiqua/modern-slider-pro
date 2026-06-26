@@ -21,6 +21,7 @@ import { SlideOverlayLayer } from '@/components/SlideOverlayLayer';
 import { SliderProgressBar } from '@/components/SliderProgressBar';
 import {
   getSlideBackgroundFit,
+  getSlideBackgroundColor,
   getSlideBackgroundImageUrl,
   getSlideBackgroundVideoUrl,
   getSlideImageBackgroundCss,
@@ -31,9 +32,11 @@ import {
 } from '@/lib/slideBackground';
 import {
   getCanvasHeightMode,
+  getRunnerBackgroundColor,
   resolveRunnerContainerStyle,
 } from '@/lib/canvasHeight';
 import { getDefaultSlideDesignSize, getSlideStageScale } from '@/lib/slideStageLayout';
+import GoogleFontsLoader from '@/components/editor/GoogleFontsLoader';
 
 interface SliderRunnerProps {
   slides?: Slide[];
@@ -93,6 +96,7 @@ const SliderRunner = ({
     sliderSettings.slideTransitionDuration ?? DEFAULT_SLIDER_SETTINGS.slideTransitionDuration;
   const designSize = getDefaultSlideDesignSize(project?.canvasSettings, 1280, 600);
   const heightMode = getCanvasHeightMode(project?.canvasSettings);
+  const runnerBackgroundColor = getRunnerBackgroundColor(project?.canvasSettings);
   const resolvedWidth = width ?? (project ? `${designSize.width}px` : '100%');
   const resolvedHeight = height ?? (project ? `${designSize.height}px` : '600px');
   const containerRef = useRef<HTMLDivElement>(null);
@@ -248,11 +252,12 @@ const SliderRunner = ({
   return (
     <div
       ref={containerRef}
-      className="msp-relative msp-overflow-hidden msp-bg-gray-100 msp-group"
-      style={containerStyle}
+      className="msp-relative msp-overflow-hidden msp-group"
+      style={{ ...containerStyle, backgroundColor: runnerBackgroundColor }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
+      <GoogleFontsLoader slides={slides} />
       <AnimatePresence mode="wait" initial={false}>
         <motion.div
           key={slides.length <= 1 && resolvedLoop ? `${currentSlide.id}-${autoplayCycle}` : currentSlide.id}
@@ -264,10 +269,10 @@ const SliderRunner = ({
           style={{
             backgroundColor:
               currentSlide.backgroundType === 'color'
-                ? currentSlide.backgroundColor || currentSlide.background
+                ? getSlideBackgroundColor(currentSlide)
                 : currentSlide.backgroundType === 'video'
                   ? '#000'
-                  : currentSlide.background,
+                  : undefined,
             backgroundImage: backgroundImageUrl ? `url(${backgroundImageUrl})` : undefined,
             ...getSlideImageBackgroundCss(backgroundFit),
           }}

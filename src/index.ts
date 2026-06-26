@@ -70,6 +70,7 @@ export {
 export {
     SLIDE_BACKGROUND_FIT_OPTIONS,
     getSlideBackgroundFit,
+    getSlideBackgroundColor,
     getSlideImageBackgroundCss,
     normalizeSlideBackgroundFit,
 } from './lib/slideBackground';
@@ -89,6 +90,7 @@ export type { SlideTransitionDirection } from './lib/slideTransitions';
 export {
     getCanvasHeightMode,
     getFitBackgroundHeight,
+    getRunnerBackgroundColor,
     normalizeCanvasHeightMode,
     resolveRunnerContainerStyle,
 } from './lib/canvasHeight';

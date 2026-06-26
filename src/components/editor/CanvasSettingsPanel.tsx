@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 
 import { SettingsPanelDivider } from '@/components/editor/SettingsPanelDivider';
+import ColorPicker from '@/components/editor/ColorPicker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -139,6 +140,33 @@ const CanvasSettingsPanel = () => {
           <p className="msp-text-[11px] msp-leading-snug msp-text-muted-foreground">
             {t('editor.canvas.heightMaxHint')}
           </p>
+        </div>
+
+        <SettingsPanelDivider />
+
+        <div className="msp-space-y-2">
+          <div>
+            <Label className="msp-text-xs">{t('editor.canvas.runnerBackground')}</Label>
+            <p className="msp-mt-0.5 msp-text-[11px] msp-leading-snug msp-text-muted-foreground">
+              {t('editor.canvas.runnerBackgroundHint')}
+            </p>
+          </div>
+          <ColorPicker
+            label={t('editor.canvas.runnerBackgroundColor')}
+            value={
+              canvasSettings.runnerBackgroundColor &&
+              canvasSettings.runnerBackgroundColor.toLowerCase() !== 'transparent'
+                ? canvasSettings.runnerBackgroundColor
+                : ''
+            }
+            onChange={(runnerBackgroundColor) =>
+              updateCanvasSettings({
+                runnerBackgroundColor: runnerBackgroundColor.trim()
+                  ? runnerBackgroundColor
+                  : 'transparent',
+              })
+            }
+          />
         </div>
 
         <SettingsPanelDivider />

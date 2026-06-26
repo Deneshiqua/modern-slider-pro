@@ -31,8 +31,10 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, onInteractOutside: onInteractOutsideProp, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & {
+    hideCloseButton?: boolean;
+  }
+>(({ className, children, hideCloseButton, onInteractOutside: onInteractOutsideProp, ...props }, ref) => {
   const portalTheme = useMspPortalThemeClasses();
 
   return (
@@ -52,10 +54,12 @@ const DialogContent = React.forwardRef<
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="msp-absolute msp-right-4 msp-top-4 msp-rounded-sm msp-opacity-70 msp-ring-offset-background msp-transition-opacity hover:msp-opacity-100 focus:msp-outline-none focus:msp-ring-2 focus:msp-ring-ring focus:msp-ring-offset-2 disabled:msp-pointer-events-none data-[state=open]:msp-bg-accent data-[state=open]:msp-text-muted-foreground">
-          <X className="msp-h-4 msp-w-4" />
-          <span className="msp-sr-only">Close</span>
-        </DialogPrimitive.Close>
+        {!hideCloseButton ? (
+          <DialogPrimitive.Close className="msp-absolute msp-right-4 msp-top-4 msp-rounded-sm msp-opacity-70 msp-ring-offset-background msp-transition-opacity hover:msp-opacity-100 focus:msp-outline-none focus:msp-ring-2 focus:msp-ring-ring focus:msp-ring-offset-2 disabled:msp-pointer-events-none data-[state=open]:msp-bg-accent data-[state=open]:msp-text-muted-foreground">
+            <X className="msp-h-4 msp-w-4" />
+            <span className="msp-sr-only">Close</span>
+          </DialogPrimitive.Close>
+        ) : null}
       </DialogPrimitive.Content>
     </DialogPortal>
   );

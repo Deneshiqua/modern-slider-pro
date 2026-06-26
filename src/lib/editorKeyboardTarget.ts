@@ -12,3 +12,13 @@ export function isEditorTextInputTarget(target: EventTarget | null): boolean {
     ),
   );
 }
+
+/** True when the user has highlighted text (browser copy/cut should win over canvas shortcuts). */
+export function hasActiveTextSelection(): boolean {
+  if (typeof window === 'undefined') return false;
+
+  const selection = window.getSelection();
+  if (!selection || selection.isCollapsed) return false;
+
+  return selection.toString().length > 0;
+}

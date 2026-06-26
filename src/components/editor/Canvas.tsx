@@ -30,6 +30,7 @@ import { SliderProgressBar } from '@/components/SliderProgressBar';
 import { useSlideTimelinePlayback } from '@/context/SlideTimelinePlaybackContext';
 import {
   getSlideBackgroundFit,
+  getSlideBackgroundColor,
   getSlideBackgroundImageUrl,
   getSlideBackgroundVideoUrl,
   getSlideImageBackgroundCss,
@@ -39,6 +40,7 @@ import {
   isYoutubeBackgroundUrl,
 } from '@/lib/slideBackground';
 import { getSlideAutoplayDwellSeconds, shouldRunSliderAutoplay } from '@/lib/timelineBridge';
+import { getRunnerBackgroundColor } from '@/lib/canvasHeight';
 
 /** Matches `msp-p-4` — included in shell min dimensions for scroll/pan gutters. */
 const CANVAS_SHELL_PAD_PX = 32;
@@ -618,10 +620,13 @@ const Canvas = () => {
     };
 
     if (currentSlide.backgroundType === 'color') {
-      if (theme === 'dark' && currentSlide.background === '#ffffff') {
+      const slideColor = getSlideBackgroundColor(currentSlide);
+      if (slideColor === 'transparent') {
+        style.backgroundColor = getRunnerBackgroundColor(canvasSettings);
+      } else if (theme === 'dark' && slideColor.toLowerCase() === '#ffffff') {
         style.backgroundColor = '#1f2937';
       } else {
-        style.backgroundColor = currentSlide.background;
+        style.backgroundColor = slideColor;
       }
     } else if (currentSlide.backgroundType === 'image') {
       const imageUrl = getSlideBackgroundImageUrl(currentSlide);

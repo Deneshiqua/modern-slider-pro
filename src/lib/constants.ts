@@ -65,6 +65,7 @@ export const DEFAULT_CANVAS_SETTINGS: CanvasSettings = {
   canvasWidth: 1280,
   canvasHeight: 720,
   canvasHeightMode: 'fixed',
+  runnerBackgroundColor: 'transparent',
 };
 
 export const FONT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 64, 72, 96];

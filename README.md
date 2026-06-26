@@ -23,7 +23,8 @@ A visual drag-and-drop slider/carousel builder and runner for React. Design anim
 - ⊞ **Fit to viewport** zoom in the canvas toolbar — scale the slide into the visible area
 - 🌗 Dark / light theme ready — all styles scoped with ``msp-`` prefix (zero conflict)
 - 💾 Versioned project JSON import / export — **Monaco Editor** in export/import dialogs
-- ✏️ **Rich text** editing for text elements (Trumbowyg); HTML renders in preview and `SliderRunner`
+- ✏️ **Rich text** editing for text elements (Trumbowyg) in a **modal** with toolbar save/close; HTML renders in preview and `SliderRunner`
+- 🔤 **Google Fonts** — search and apply font families from a bundled catalog; weights 300–700; auto-loaded in editor and `SliderRunner`
 - 🌐 Built-in **EN / TR** UI strings; `LanguageProvider` with optional `storageKey` and browser-language default
 - 🌗 **ThemeProvider** follows OS light/dark until the user picks a theme; optional `storageKey` persistence
 - ↩️ **Undo / redo** — slide-scoped history (other slides are unaffected); global undo for project-wide changes; **Reset slide** next to undo when the active slide has edits
@@ -207,6 +208,19 @@ Portals attach to ``document.body`` with high **z-index** values (near **100 0
 ---
 
 ## Changelog
+
+### 0.12.0 — 2026-06-26
+- **Added**: **Font** accordion in Properties (text & button) — Google Fonts search/select, font size, and font weight; `GoogleFontsLoader` injects stylesheets in editor and `SliderRunner`.
+- **Added**: Bundled `googleFontsCatalog.json` (~1900 families) — avoids browser CORS on Google metadata API.
+- **Added**: **`runnerBackgroundColor`** on `CanvasSettings` — outer slider container fill in editor/preview (default **transparent**); ColorPicker in Canvas settings.
+- **Added**: `PropertyField` — horizontal Properties layout (label left, control right) across color, font, spacing, style, and slide background fields.
+- **Added**: `TextContentEditorModal` — Trumbowyg opens in a modal; **Save** / **Close** on the editor toolbar; **View HTML** toggles WYSIWYG ↔ source.
+- **Improved**: Properties accordion headers — tighter padding and **12px** labels.
+- **Improved**: Selecting a layer switches the right sidebar to the **Layers** tab and shows Properties.
+- **Improved**: Layer panel list — name only (content preview line removed).
+- **Improved**: Slide **transparent** background — empty/`transparent` color no longer falls back to white; runner/container color shows through (`getSlideBackgroundColor`, `SliderRunner`).
+- **Improved**: **Ctrl+C** / **⌘+C** with highlighted UI text copies the selection instead of copying the canvas layer (`hasActiveTextSelection`).
+- **Fixed**: Trumbowyg **View HTML** mode and modal min-height/toolbar layout.
 
 ### 0.11.0 — 2026-05-19
 - **Improved**: Demo/marketing site — shared header with **npm** and **GitHub** links; mobile hamburger menu, responsive layout on home, demo, docs, and footer.

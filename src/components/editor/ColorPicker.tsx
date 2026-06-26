@@ -3,9 +3,9 @@ import React, { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Pipette } from 'lucide-react';
 import { Slider } from '@/components/ui/slider';
+import PropertyField from '@/components/editor/PropertyField';
 
 type ColorPickerProps = {
   value: string;
@@ -137,33 +137,30 @@ const ColorPicker = ({ value, onChange, label, presetColors }: ColorPickerProps)
 
   const displayPreviewColor = inputValue ? buildColorWithOpacity(inputValue, opacity) : '';
 
-  return (
-    <div className="msp-space-y-1.5">
-      {label && <Label className="msp-text-xs msp-text-muted-foreground">{label}</Label>}
-
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            className="msp-w-full msp-h-9 msp-justify-start msp-gap-2 msp-px-3 msp-bg-transparent"
+  const pickerControl = (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          className="msp-w-full msp-h-7 msp-justify-start msp-gap-2 msp-px-2.5 msp-bg-transparent"
+        >
+          <div
+            className="msp-w-4 msp-h-4 msp-rounded msp-border msp-border-border msp-shadow-sm msp-shrink-0"
+            style={checkerboardBackground}
           >
             <div
-              className="msp-w-5 msp-h-5 msp-rounded msp-border msp-border-border msp-shadow-sm"
-              style={checkerboardBackground}
-            >
-              <div
-                className="msp-w-full msp-h-full msp-rounded"
-                style={{ backgroundColor: displayPreviewColor || 'transparent' }}
-              />
-            </div>
-            <span className="msp-text-xs msp-font-mono msp-flex-1 msp-text-left msp-truncate">
-              {value || 'Renk seç'}
-            </span>
-            <Pipette className="msp-w-3.5 msp-h-3.5 msp-text-muted-foreground" />
-          </Button>
-        </PopoverTrigger>
+              className="msp-w-full msp-h-full msp-rounded"
+              style={{ backgroundColor: displayPreviewColor || 'transparent' }}
+            />
+          </div>
+          <span className="msp-text-xs msp-font-mono msp-flex-1 msp-text-left msp-truncate">
+            {value || 'Renk seç'}
+          </span>
+          <Pipette className="msp-w-3.5 msp-h-3.5 msp-text-muted-foreground msp-shrink-0" />
+        </Button>
+      </PopoverTrigger>
 
-        <PopoverContent className="msp-w-64 msp-p-3" align="start">
+      <PopoverContent className="msp-w-64 msp-p-3" align="start">
           <div className="msp-space-y-3">
             <div className="msp-flex msp-gap-2">
               <button
@@ -259,7 +256,16 @@ const ColorPicker = ({ value, onChange, label, presetColors }: ColorPickerProps)
           </div>
         </PopoverContent>
       </Popover>
-    </div>
+  );
+
+  if (!label) {
+    return <div className="msp-min-w-0">{pickerControl}</div>;
+  }
+
+  return (
+    <PropertyField label={label}>
+      {pickerControl}
+    </PropertyField>
   );
 };
 

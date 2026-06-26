@@ -1,5 +1,6 @@
 import { BORDER_RADII } from '@/lib/constants';
 import ColorPicker from '@/components/editor/ColorPicker';
+import PropertyField from '@/components/editor/PropertyField';
 import type { LengthUnit } from '@/components/editor/SpacingControls';
 import {
   formatBoxValue,
@@ -402,10 +403,9 @@ const ColorAndBorderControls = ({ elementId, editableElement, propertyMode }: Co
     stepVal: number,
     updateSide: (i: 0 | 1 | 2 | 3, v: number) => void,
   ) => (
-    <div className="msp-grid msp-grid-cols-2 msp-gap-x-3 msp-gap-y-4">
+    <div className="msp-grid msp-grid-cols-1 msp-gap-y-3">
       {SIDE_ORDER.map(i => (
-        <div key={`${prefix}-${i}`} className="msp-space-y-1 msp-min-w-0">
-          <Label className="msp-text-[11px]">{t(SIDE_LABEL_KEYS[i])}</Label>
+        <PropertyField key={`${prefix}-${i}`} label={t(SIDE_LABEL_KEYS[i])} labelClassName="msp-text-[11px]">
           <div className="msp-flex msp-items-center msp-gap-2">
             <Slider
               className="msp-flex-1"
@@ -424,7 +424,7 @@ const ColorAndBorderControls = ({ elementId, editableElement, propertyMode }: Co
               onChange={e => updateSide(i, Number.parseFloat(e.target.value))}
             />
           </div>
-        </div>
+        </PropertyField>
       ))}
     </div>
   );
@@ -495,21 +495,17 @@ const ColorAndBorderControls = ({ elementId, editableElement, propertyMode }: Co
       </TabsList>
 
       <TabsContent value="normal" className="msp-space-y-3 msp-mt-3">
-        <div className="msp-space-y-1">
-          <ColorPicker
-            label={t('editor.properties.backgroundColor')}
-            value={String(style.backgroundColor ?? '')}
-            onChange={c => handleStyleChange('backgroundColor', c)}
-          />
-        </div>
+        <ColorPicker
+          label={t('editor.properties.backgroundColor')}
+          value={String(style.backgroundColor ?? '')}
+          onChange={c => handleStyleChange('backgroundColor', c)}
+        />
 
-        <div className="msp-space-y-1">
-          <ColorPicker
-            label={t('editor.properties.textColor')}
-            value={String(style.color ?? '')}
-            onChange={c => handleStyleChange('color', c)}
-          />
-        </div>
+        <ColorPicker
+          label={t('editor.properties.textColor')}
+          value={String(style.color ?? '')}
+          onChange={c => handleStyleChange('color', c)}
+        />
 
         <div className="msp-rounded-md msp-border msp-border-border msp-bg-muted/20 msp-overflow-hidden">
           <div className="msp-flex msp-items-center msp-justify-between msp-gap-2 msp-px-3 msp-py-2.5 msp-bg-muted/30">
@@ -530,8 +526,7 @@ const ColorAndBorderControls = ({ elementId, editableElement, propertyMode }: Co
 
           {borderEnabled && (
             <div className="msp-space-y-3 msp-p-3">
-              <div className="msp-space-y-1">
-                <Label className="msp-text-xs">{t('editor.properties.borderType')}</Label>
+              <PropertyField label={t('editor.properties.borderType')}>
                 <Select value={normalizeSelectableBorderKind(borderStyleSelectValue)} onValueChange={handleBorderStyleChange}>
                   <SelectTrigger className="msp-h-7 msp-text-xs">
                     <SelectValue />
@@ -543,13 +538,11 @@ const ColorAndBorderControls = ({ elementId, editableElement, propertyMode }: Co
                     <SelectItem value="double">{t('editor.properties.borderStyleDouble')}</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </PropertyField>
 
-              <div className="msp-space-y-1">
-                <ColorPicker label={t('editor.properties.borderColor')} value={borderColorValue} onChange={handleBorderColorChangeWrapped} />
-              </div>
+              <ColorPicker label={t('editor.properties.borderColor')} value={borderColorValue} onChange={handleBorderColorChangeWrapped} />
 
-              <Label className="msp-text-xs msp-font-medium">{t('editor.properties.borderSize')}</Label>
+              <Label className="msp-text-xs msp-font-medium msp-block">{t('editor.properties.borderSize')}</Label>
 
               {spacingUnitButtons(bdUnit, u => {
                 setBdUnit(u);
@@ -573,8 +566,7 @@ const ColorAndBorderControls = ({ elementId, editableElement, propertyMode }: Co
                 </div>
               </div>
 
-              <div className="msp-space-y-1">
-                <Label className="msp-text-xs">{t('editor.properties.borderRadius')}</Label>
+              <PropertyField label={t('editor.properties.borderRadius')}>
                 <Select
                   value={String(style.borderRadius ?? 0)}
                   onValueChange={val => handleStyleChange('borderRadius', Number(val))}
@@ -590,7 +582,7 @@ const ColorAndBorderControls = ({ elementId, editableElement, propertyMode }: Co
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </PropertyField>
             </div>
           )}
         </div>
@@ -599,23 +591,17 @@ const ColorAndBorderControls = ({ elementId, editableElement, propertyMode }: Co
       <TabsContent value="hover" className="msp-space-y-3 msp-mt-3">
         <p className="msp-text-muted-foreground msp-text-[11px]">{t('editor.properties.colorHoverHint')}</p>
         <div className="msp-space-y-3 msp-rounded-md msp-border msp-border-border msp-bg-muted/15 msp-p-3">
-          <div className="msp-space-y-1">
-            <ColorPicker
-              label={t('editor.properties.hoverBackgroundColor')}
-              value={String(hoverBg ?? '')}
-              onChange={c => applyHoverStylePatch({ backgroundColor: c })}
-            />
-          </div>
-          <div className="msp-space-y-1">
-            <ColorPicker
-              label={t('editor.properties.hoverTextColor')}
-              value={String(hoverFg ?? '')}
-              onChange={c => applyHoverStylePatch({ color: c })}
-            />
-          </div>
-          <div className="msp-space-y-1">
-            <ColorPicker label={t('editor.properties.hoverBorderColor')} value={hoverBorderPickerValue} onChange={handleHoverBorderColor} />
-          </div>
+          <ColorPicker
+            label={t('editor.properties.hoverBackgroundColor')}
+            value={String(hoverBg ?? '')}
+            onChange={c => applyHoverStylePatch({ backgroundColor: c })}
+          />
+          <ColorPicker
+            label={t('editor.properties.hoverTextColor')}
+            value={String(hoverFg ?? '')}
+            onChange={c => applyHoverStylePatch({ color: c })}
+          />
+          <ColorPicker label={t('editor.properties.hoverBorderColor')} value={hoverBorderPickerValue} onChange={handleHoverBorderColor} />
         </div>
       </TabsContent>
     </Tabs>
