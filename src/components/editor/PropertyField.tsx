@@ -4,7 +4,7 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 
 export const propertyFieldGridClass =
-  'msp-grid msp-grid-cols-[minmax(0,40%)_minmax(0,1fr)] msp-items-center msp-gap-x-2 msp-gap-y-1';
+  'msp-grid msp-grid-cols-[minmax(0,36%)_minmax(0,1fr)] msp-items-center msp-gap-x-2 msp-gap-y-1';
 
 type PropertyFieldProps = {
   label: React.ReactNode;

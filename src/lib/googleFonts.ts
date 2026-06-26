@@ -20,7 +20,7 @@ function normalizeFontFamily(value: string | undefined | null): string | null {
 /** Google Fonts CSS2 URL for a family. */
 export function buildGoogleFontStylesheetUrl(family: string): string {
   const encoded = family.trim().replace(/\s+/g, '+');
-  return `https://fonts.googleapis.com/css2?family=${encoded}:wght@300;400;500;600;700&display=swap`;
+  return `https://fonts.googleapis.com/css2?family=${encoded}:wght@100;200;300;400;500;600;700;800;900&display=swap`;
 }
 
 /** Inject a Google Font stylesheet once per family. */

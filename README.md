@@ -24,7 +24,7 @@ A visual drag-and-drop slider/carousel builder and runner for React. Design anim
 - 🌗 Dark / light theme ready — all styles scoped with ``msp-`` prefix (zero conflict)
 - 💾 Versioned project JSON import / export — **Monaco Editor** in export/import dialogs
 - ✏️ **Rich text** editing for text elements (Trumbowyg) in a **modal** with toolbar save/close; HTML renders in preview and `SliderRunner`
-- 🔤 **Google Fonts** — search and apply font families from a bundled catalog; weights 300–700; auto-loaded in editor and `SliderRunner`
+- 🔤 **Google Fonts** — search and apply font families from a bundled catalog; **line height**, **letter spacing**, **font weight**, and **font size** (px/rem) in the Font properties accordion; auto-loaded in editor and `SliderRunner`
 - 🌐 Built-in **EN / TR** UI strings; `LanguageProvider` with optional `storageKey` and browser-language default
 - 🌗 **ThemeProvider** follows OS light/dark until the user picks a theme; optional `storageKey` persistence
 - ↩️ **Undo / redo** — slide-scoped history (other slides are unaffected); global undo for project-wide changes; **Reset slide** next to undo when the active slide has edits
@@ -208,6 +208,14 @@ Portals attach to ``document.body`` with high **z-index** values (near **100 0
 ---
 
 ## Changelog
+
+### 0.13.0 — 2026-06-26
+- **Added**: **Line height** and **letter spacing** controls in the Font accordion — compact range sliders with numeric input; reset button restores defaults.
+- **Added**: **Font size** slider + input; click **px** / **rem** suffix to toggle units (`fontSizeUnits.ts`); rem values stored as e.g. `1.25rem`, px as numbers.
+- **Added**: **Font weight** range slider (100–900, step 100); Google Fonts stylesheet loads weights 100–900.
+- **Improved**: Font panel UX — thinner `size="sm"` sliders; property labels use **36%** width (was 40%) for more control room; slider + input + reset on one row.
+- **Improved**: Font family label → **Font Family (Google)** / **Font Ailesi (google)**; removed redundant Google Fonts hint text below the picker.
+- **Fixed**: Text bounds (`groupBounds`) resolve **rem** font sizes correctly via `fontSizeToPx`.
 
 ### 0.12.0 — 2026-06-26
 - **Added**: **Font** accordion in Properties (text & button) — Google Fonts search/select, font size, and font weight; `GoogleFontsLoader` injects stylesheets in editor and `SliderRunner`.

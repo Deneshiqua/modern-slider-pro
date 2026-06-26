@@ -3,6 +3,7 @@ import type { LengthUnit } from '@/components/editor/SpacingControls';
 import { readBoxModel } from '@/components/editor/SpacingControls';
 import { resolveElementProperties } from '@/lib/responsive';
 import { htmlToPlainText } from '@/lib/htmlContent';
+import { fontSizeToPx } from '@/lib/fontSizeUnits';
 
 export type BoundsRect = { minX: number; minY: number; maxX: number; maxY: number };
 
@@ -173,7 +174,7 @@ function displayTextForMetrics(
 }
 
 function inferSizeForBounds(resolved: EditorElement): { w: number; h: number } {
-  const fs = Number(resolved.style.fontSize) || 16;
+  const fs = fontSizeToPx(resolved.style.fontSize);
   switch (resolved.type) {
     case 'text': {
       const raw = displayTextForMetrics(

@@ -69,6 +69,11 @@ export const DEFAULT_CANVAS_SETTINGS: CanvasSettings = {
 };
 
 export const FONT_SIZES = [12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48, 64, 72, 96];
+export const FONT_SIZE_RANGE = { min: 8, max: 120, step: 1, default: 16 } as const;
+export const FONT_REM_SIZE_RANGE = { min: 0.5, max: 7.5, step: 0.0625, default: 1 } as const;
+export const FONT_LINE_HEIGHT_RANGE = { min: 0.8, max: 3, step: 0.05, default: 1 } as const;
+export const FONT_LETTER_SPACING_RANGE = { min: -5, max: 20, step: 1, default: 0 } as const;
+export const FONT_WEIGHT_RANGE = { min: 100, max: 900, step: 100, default: 400 } as const;
 export const BORDER_RADII = [0, 2, 4, 6, 8, 12, 16, 20, 24, 32, 9999]; // 9999 for full rounded/circle
 
 export const ANIMATION_PRESETS: Record<string, AnimationConfig> = {

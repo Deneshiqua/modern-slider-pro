@@ -513,9 +513,13 @@ const PropertiesPanel = () => {
                       }
                       fontSize={editableElement.style.fontSize}
                       fontWeight={editableElement.style.fontWeight}
+                      lineHeight={editableElement.style.lineHeight}
+                      letterSpacing={editableElement.style.letterSpacing}
                       onFontFamilyChange={(family) => handleResponsiveStyleChange('fontFamily', family)}
                       onFontSizeChange={(size) => handleResponsiveStyleChange('fontSize', size)}
                       onFontWeightChange={(weight) => handleResponsiveStyleChange('fontWeight', weight)}
+                      onLineHeightChange={(value) => handleResponsiveStyleChange('lineHeight', value)}
+                      onLetterSpacingChange={(value) => handleResponsiveStyleChange('letterSpacing', value)}
                     />
                   ) : null}
                 </AccordionContent>
